@@ -14,6 +14,50 @@
             : ''
     );
     let lightbox: ImageLightbox;
+    let carouselIndex = $state(0);
+    let carouselTouchStartX = 0;
+    let carouselTouchStartY = 0;
+    let suppressCarouselClick = false;
+
+    function prevSlide() {
+        if (carouselIndex > 0) carouselIndex--;
+    }
+
+    function nextSlide() {
+        const gallery = data.meta.gallery;
+        if (gallery && carouselIndex < gallery.length - 1) carouselIndex++;
+    }
+
+    function handleCarouselTouchStart(event: TouchEvent) {
+        const touch = event.touches[0];
+        carouselTouchStartX = touch.clientX;
+        carouselTouchStartY = touch.clientY;
+    }
+
+    function handleCarouselTouchEnd(event: TouchEvent) {
+        const gallery = data.meta.gallery;
+        if (!gallery?.length) return;
+
+        const touch = event.changedTouches[0];
+        const deltaX = carouselTouchStartX - touch.clientX;
+        const deltaY = carouselTouchStartY - touch.clientY;
+
+        if (Math.abs(deltaX) < 44 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) {
+            return;
+        }
+
+        suppressCarouselClick = true;
+
+        if (deltaX > 0) {
+            nextSlide();
+        } else {
+            prevSlide();
+        }
+
+        setTimeout(() => {
+            suppressCarouselClick = false;
+        }, 120);
+    }
 
     function resetCardState() {
         currentIndex.set(0);
@@ -36,6 +80,16 @@
 
     function openLightbox(src: string, alt: string) {
         if (lightbox) lightbox.openLightbox(src, alt);
+    }
+
+    function openCarouselImage(event: MouseEvent, src: string, alt: string) {
+        if (suppressCarouselClick) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+
+        openLightbox(src, alt);
     }
 
     onMount(() => {
@@ -118,20 +172,60 @@
             </div>
 
             {#if data.meta.gallery?.length}
-                <div class="playlist-image-grid">
-                    {#each data.meta.gallery as image}
-                        <figure>
-                            <!-- svelte-ignore a11y_click_events_have_key_events -->
-                            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-                            <img
-                                src={image.src}
-                                alt={image.alt}
-                                loading="lazy"
-                                onclick={() => openLightbox(image.src, image.alt)}
-                            >
-                            <figcaption class="playlist-image-caption">{image.alt}</figcaption>
-                        </figure>
-                    {/each}
+                <div class="playlist-carousel">
+                    <div
+                        class="playlist-carousel-viewport"
+                        role="group"
+                        aria-label="Galeria de imagens"
+                        ontouchstart={handleCarouselTouchStart}
+                        ontouchend={handleCarouselTouchEnd}
+                    >
+                        <div class="playlist-carousel-track" style="transform: translateX(-{carouselIndex * 100}%)">
+                            {#each data.meta.gallery as image}
+                                <figure class="playlist-carousel-slide">
+                                    <!-- svelte-ignore a11y_click_events_have_key_events -->
+                                    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                                    <img
+                                        src={image.src}
+                                        alt={image.alt}
+                                        loading="lazy"
+                                        onclick={(event) => openCarouselImage(event, image.src, image.alt)}
+                                    >
+                                    <figcaption class="playlist-image-caption">{image.alt}</figcaption>
+                                </figure>
+                            {/each}
+                        </div>
+                    </div>
+                    <div class="playlist-carousel-controls">
+                        <button
+                            class="playlist-carousel-btn"
+                            type="button"
+                            onclick={prevSlide}
+                            disabled={carouselIndex === 0}
+                            aria-label="Foto anterior"
+                        >
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        <div class="playlist-carousel-dots">
+                            {#each data.meta.gallery as _, i}
+                                <button
+                                    class="playlist-carousel-dot"
+                                    class:active={i === carouselIndex}
+                                    onclick={() => carouselIndex = i}
+                                    aria-label={`Foto ${i + 1}`}
+                                ></button>
+                            {/each}
+                        </div>
+                        <button
+                            class="playlist-carousel-btn"
+                            type="button"
+                            onclick={nextSlide}
+                            disabled={carouselIndex === data.meta.gallery.length - 1}
+                            aria-label="Próxima foto"
+                        >
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
                 </div>
             {/if}
 
@@ -204,6 +298,121 @@
 
         .playlist-soundcloud-player iframe {
             height: 300px;
+        }
+
+    }
+
+    .playlist-carousel {
+        margin-top: 34px;
+        max-width: 70%;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .playlist-carousel-viewport {
+        overflow: hidden;
+        background-color: #111111;
+        touch-action: pan-y;
+        user-select: none;
+    }
+
+    .playlist-carousel-track {
+        display: flex;
+        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .playlist-carousel-slide {
+        flex: 0 0 100%;
+        margin: 0;
+    }
+
+    .playlist-carousel-slide img {
+        width: 100%;
+        aspect-ratio: 4 / 5;
+        object-fit: cover;
+        cursor: zoom-in;
+        display: block;
+    }
+
+    .playlist-carousel-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0 0;
+        gap: 12px;
+    }
+
+    .playlist-carousel-btn {
+        min-width: 44px;
+        min-height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        color: #111111;
+        font-family: var(--font-family);
+        font-size: 13px;
+        font-weight: 800;
+        padding: 6px 16px;
+        cursor: pointer;
+        letter-spacing: 0.06em;
+        transition: background-color 0.2s, color 0.2s;
+        text-transform: uppercase;
+    }
+
+    .playlist-carousel-btn:hover:not(:disabled) {
+        background-color: #111111;
+        color: #f4f4ef;
+    }
+
+    .playlist-carousel-btn:disabled {
+        opacity: 0.22;
+        cursor: default;
+    }
+
+    .playlist-carousel-dots {
+        display: flex;
+        gap: 7px;
+        align-items: center;
+    }
+
+    .playlist-carousel-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background-color: rgba(0, 0, 0, 0.18);
+        border: none;
+        padding: 0;
+        cursor: pointer;
+        transition: background-color 0.2s, transform 0.2s;
+    }
+
+    .playlist-carousel-dot.active {
+        background-color: #779383;
+        transform: scale(1.4);
+    }
+
+    @media (max-width: 640px) {
+        .playlist-carousel {
+            max-width: 100%;
+        }
+
+        .playlist-carousel-viewport {
+            width: 100%;
+        }
+
+        .playlist-carousel-btn {
+            flex: 0 0 auto;
+            min-width: 46px;
+            min-height: 40px;
+            padding: 7px 12px;
+        }
+
+        .playlist-carousel-dots {
+            min-width: 0;
+            flex-wrap: wrap;
+            justify-content: center;
         }
     }
 </style>

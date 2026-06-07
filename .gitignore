@@ -66,3 +66,5 @@ Desktop.ini
 # 7. Backups locais / material duplicado fora do app
 _backup/
 *.7z
+
+.vercel

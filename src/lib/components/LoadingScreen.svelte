@@ -80,6 +80,7 @@
         left: 0;
         width: 100vw;
         height: 100vh;
+        height: 100dvh;
         background-color: var(--bg-color, #050505);
         color: var(--text-color, #ffffff);
         z-index: 999999;

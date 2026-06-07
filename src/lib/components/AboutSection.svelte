@@ -1,10 +1,34 @@
 <script lang="ts">
     let currentSlide = $state(0);
+    let slideshowTouchStartX = 0;
+    let slideshowTouchStartY = 0;
     const totalSlides = 11;
+
+    function setSlide(index: number) {
+        currentSlide = (index + totalSlides) % totalSlides;
+    }
+
+    function handleSlideshowTouchStart(event: TouchEvent) {
+        const touch = event.touches[0];
+        slideshowTouchStartX = touch.clientX;
+        slideshowTouchStartY = touch.clientY;
+    }
+
+    function handleSlideshowTouchEnd(event: TouchEvent) {
+        const touch = event.changedTouches[0];
+        const deltaX = slideshowTouchStartX - touch.clientX;
+        const deltaY = slideshowTouchStartY - touch.clientY;
+
+        if (Math.abs(deltaX) < 44 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) {
+            return;
+        }
+
+        setSlide(currentSlide + (deltaX > 0 ? 1 : -1));
+    }
 
     $effect(() => {
         const interval = setInterval(() => {
-            currentSlide = (currentSlide + 1) % totalSlides;
+            setSlide(currentSlide + 1);
         }, 3000);
 
         return () => clearInterval(interval);
@@ -29,7 +53,13 @@
         </div>
 
         <div class="about-right-col">
-            <div class="slideshow-container">
+            <div
+                class="slideshow-container"
+                role="group"
+                aria-label="Galeria BLACKMESA"
+                ontouchstart={handleSlideshowTouchStart}
+                ontouchend={handleSlideshowTouchEnd}
+            >
                 <div
                     class="slideshow-track"
                     style="width: {totalSlides * 100}%; transform: translateX(-{(currentSlide * 100) / totalSlides}%);"
@@ -141,6 +171,8 @@
         overflow: hidden;
         border: 1px solid var(--line-color);
         background: #0b0b0b;
+        touch-action: pan-y;
+        user-select: none;
     }
 
     .slideshow-container::after {

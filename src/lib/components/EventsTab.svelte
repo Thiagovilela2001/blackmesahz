@@ -41,16 +41,16 @@
     {#if heroData}
         <div id="events-hero">
             <div class="hero-img" style="background-image: url('/{heroData.image}')"></div>
-                <div class="hero-info" style="align-items: flex-start; text-align: left; flex: 1;">
+            <div class="hero-info">
                 {#if dateInfo.isUpcoming}
                     <span class="event-badge">EM BREVE</span>
                 {/if}
-                <span class="hero-date" style="font-size: 13px; color: #aaa;">{dateInfo.dateStr}</span>
-                <h2 class="hero-artist" style="font-size: 32px; color: #ffffff; font-weight: bold; text-transform: uppercase; margin: 2px 0; letter-spacing: 0; line-height: 1;">{heroData.artist}</h2>
-                <h3 class="hero-title" style="font-size: 17px; color: #888; margin: 0 0 10px 0; letter-spacing: 0;">{heroData.song}</h3>
+                <span class="hero-date">{dateInfo.dateStr}</span>
+                <h2 class="hero-artist">{heroData.artist}</h2>
+                <h3 class="hero-title">{heroData.song}</h3>
 
                 {#if heroData.location}
-                    <p style="font-size: 12px; color: #ccc; margin: 0 0 15px 0; display: flex; align-items: center; gap: 5px; letter-spacing: 0;">
+                    <p class="hero-location">
                         <i class="fa-solid fa-location-dot"></i> Localização: {heroData.location}
                     </p>
                 {/if}

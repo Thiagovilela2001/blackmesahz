@@ -170,29 +170,30 @@
     }
 
     function getCardStyle(i: number): string {
-        const isMobile =
-            typeof window !== "undefined" && window.innerWidth <= 768;
-        const baseW = isMobile ? 320 : 500;
-        const baseH = isMobile ? 160 : 225;
+        const viewportW = typeof window !== "undefined" ? window.innerWidth : 1024;
+        const viewportH = typeof window !== "undefined" ? window.innerHeight : 768;
+        const isMobile = viewportW <= 768;
+        const wrapperLeft = isMobile ? 24 : 180;
+        const baseW = isMobile ? Math.min(320, Math.max(248, viewportW - 48)) : 500;
+        const baseH = isMobile ? Math.round(baseW * 0.5) : 225;
         const deltaIndex = i - $currentIndex;
         const distance = Math.abs(deltaIndex);
-        const cardSpacingY = 240;
+        const cardSpacingY = isMobile ? Math.min(218, Math.max(178, viewportH * 0.3)) : 240;
+        const centerYOffset = baseH / 2;
 
         if ($expandedCardIndex !== null) {
             if ($expandedCardIndex === i) {
-                const centerX = window.innerWidth / 2;
-                const targetW = isMobile ? window.innerWidth * 0.9 : Math.min(1200, window.innerWidth * 0.95);
-                const targetH = isMobile ? window.innerHeight * 0.75 : 550;
-                const wrapperLeft = isMobile ? 40 : 180;
+                const centerX = viewportW / 2;
+                const targetW = isMobile ? Math.min(viewportW - 24, viewportW * 0.94) : Math.min(1200, viewportW * 0.95);
+                const targetH = isMobile ? Math.max(260, Math.min(viewportH - 96, viewportH * 0.76)) : 550;
                 const moveX = centerX - wrapperLeft - targetW / 2;
-                const moveY = -(targetH / 2) + 15;
+                const moveY = -(targetH / 2) + (isMobile ? 18 : 15);
                 return `width:${targetW}px;height:${targetH}px;transform:translate3d(${moveX}px,${moveY}px,0) rotateZ(0deg);z-index:100;opacity:1;pointer-events:auto;`;
             } else {
                 const extraPush = Math.sign(deltaIndex) * 200;
                 const translateY = deltaIndex * cardSpacingY + extraPush;
                 const rotateZ = deltaIndex * 4;
                 const scale = 0.85 - distance * 0.05;
-                const centerYOffset = isMobile ? 80 : 112.5;
                 return `width:${baseW}px;height:${baseH}px;transform:translateY(${translateY - centerYOffset}px) rotateZ(${rotateZ}deg) scale(${scale});z-index:0;opacity:0;pointer-events:none;`;
             }
         }
@@ -201,7 +202,6 @@
             const translateY = deltaIndex * cardSpacingY;
             const rotateZ = deltaIndex * 4;
             const scale = 0.85 - distance * 0.05;
-            const centerYOffset = isMobile ? 80 : 112.5;
             return `width:${baseW}px;height:${baseH}px;transform:translateY(${translateY - centerYOffset}px) rotateZ(${rotateZ}deg) scale(${scale});opacity:0;pointer-events:none;z-index:0;`;
         }
 
@@ -210,7 +210,6 @@
         let scale = distance === 0 ? 1 : 0.85 - distance * 0.05;
         const opacity = distance === 0 ? 1 : Math.max(0.1, 1 - distance * 0.4);
         const zIndex = distance === 0 ? 10 : 10 - distance;
-        const centerYOffset = isMobile ? 80 : 112.5;
 
         return `width:${baseW}px;height:${baseH}px;transform:translateY(${translateY - centerYOffset}px) rotateZ(${rotateZ}deg) scale(${scale});opacity:${opacity};z-index:${zIndex};pointer-events:auto;`;
     }

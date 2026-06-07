@@ -98,4 +98,18 @@
     .cookie-btn.decline:hover {
         background: rgba(255, 255, 255, 0.1);
     }
+
+    @media (max-width: 520px) {
+        #cookie-banner {
+            left: 12px;
+            right: 12px;
+            bottom: 16px;
+            width: auto;
+            padding: 16px;
+        }
+
+        .cookie-actions {
+            flex-direction: column;
+        }
+    }
 </style>

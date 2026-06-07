@@ -20,6 +20,8 @@
     };
 
     let activeFeatureIndex = $state(0);
+    let featureTouchStartX = 0;
+    let featureTouchStartY = 0;
     let latestRelease = $derived($page.data.releasesData?.[0]);
     let latestArticle = $derived($page.data.playlistCardsData?.[0]);
     let latestEvent = $derived($page.data.eventsData?.slice(-1)[0]);
@@ -137,6 +139,30 @@
         setFeature(activeFeatureIndex - 1);
     }
 
+    function handleFeatureTouchStart(event: TouchEvent) {
+        const touch = event.touches[0];
+        featureTouchStartX = touch.clientX;
+        featureTouchStartY = touch.clientY;
+    }
+
+    function handleFeatureTouchEnd(event: TouchEvent) {
+        if (!featureSlides.length) return;
+
+        const touch = event.changedTouches[0];
+        const deltaX = featureTouchStartX - touch.clientX;
+        const deltaY = featureTouchStartY - touch.clientY;
+
+        if (Math.abs(deltaX) < 44 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) {
+            return;
+        }
+
+        if (deltaX > 0) {
+            nextFeature();
+        } else {
+            previousFeature();
+        }
+    }
+
     function goToArticles() {
         currentTab.set('playlists');
     }
@@ -163,7 +189,12 @@
 </script>
 
 <div id="home-wrapper">
-    <section class="home-feature">
+    <section
+        class="home-feature"
+        aria-label="Destaques BLACKMESA"
+        ontouchstart={handleFeatureTouchStart}
+        ontouchend={handleFeatureTouchEnd}
+    >
         {#if activeFeature}
             <div class="feature-media">
                 <img src={imageUrl(activeFeature.image)} alt={activeFeature.title} />
@@ -191,9 +222,7 @@
                     <span>{activeFeature.metaPrimary}</span>
                     <span>{activeFeature.metaSecondary}</span>
                 </div>
-                <p>
-                    {$siteLanguage === 'en' ? activeFeature.descriptionEn : activeFeature.descriptionPt}
-                </p>
+
                 <div class="feature-actions">
                     <button class="bm-btn is-primary" onclick={activeFeature.action}>
                         <i class={activeFeature.icon}></i>
@@ -335,11 +364,14 @@
         left: 0;
         width: 100vw;
         height: calc(100vh - 123px);
+        height: calc(100dvh - 123px);
         padding: 24px 32px 64px;
         display: flex;
         flex-direction: column;
         gap: 18px;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
         z-index: 50;
         color: #ffffff;
         pointer-events: auto;
@@ -387,6 +419,7 @@
         display: grid;
         grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.18fr);
         overflow: hidden;
+        touch-action: pan-y;
     }
 
     .feature-media {
@@ -506,10 +539,10 @@
 
     .feature-copy h1 {
         max-width: 960px;
-        margin: 14px 0 0;
-        font-size: clamp(44px, 8vw, 104px);
+        margin: 8px 0 0;
+        font-size: clamp(28px, 5vw, 72px);
         font-weight: 800;
-        line-height: 0.88;
+        line-height: 0.92;
         text-transform: uppercase;
     }
 
@@ -517,7 +550,7 @@
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
-        margin-top: 18px;
+        margin-top: 10px;
     }
 
     .feature-meta span,
@@ -546,7 +579,7 @@
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
-        margin-top: 30px;
+        margin-top: 18px;
     }
 
     .feature-dots {
@@ -1008,6 +1041,7 @@
         #home-wrapper {
             top: 74px;
             height: calc(100vh - 122px);
+            height: calc(100dvh - 122px);
             padding: 16px 12px 56px;
             gap: 12px;
             background-size: 30px 30px;

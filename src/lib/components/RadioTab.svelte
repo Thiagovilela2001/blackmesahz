@@ -190,6 +190,7 @@
         border-radius: 20px;
         overflow: hidden;
         height: calc(100vh - 195px);
+        height: calc(100dvh - 195px);
         border: 1px solid rgba(255, 255, 255, 0.08);
         box-shadow:
             0 0 0 1px rgba(119, 147, 131, 0.06),
@@ -209,6 +210,7 @@
 
         .spotify-embed-wrapper {
             height: calc(100vh - 170px);
+            height: calc(100dvh - 170px);
             border-radius: 14px;
         }
     }

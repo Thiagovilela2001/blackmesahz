@@ -1,10 +1,10 @@
 export const playlistCardsData = [
     {
-        catalog: 'Edição 001',
-        artist: 'SNOT - CONCRETICIDADE',
-        song: 'Playlist / Dubstep',
-        image: 'playlist/snot/WhatsApp%20Image%202026-06-04%20at%2017.48.49.jpeg',
-        slug: 'concreticidade'
+        catalog: 'Piloto',
+        artist: 'BLACKMESA Hz - PILOTO',
+        song: 'Playlist / UK Garage',
+        image: 'playlist/piloto/1.%20FRENTE.png',
+        slug: 'piloto'
     },
     {
         catalog: 'Edição 002',
