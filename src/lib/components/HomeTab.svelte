@@ -200,11 +200,6 @@
     <section class="home-mobile-cover" aria-label="BLACKMESA mobile cover">
         <img class="mobile-cover-logo" src="/logo/long.webp" alt="BLACKMESA" />
         <h1>Hz</h1>
-        <p>
-            {$siteLanguage === 'en'
-                ? 'Bass, radio, releases, articles and events from the Brazilian underground.'
-                : 'Bass, radio, releases, artigos e eventos do underground brasileiro.'}
-        </p>
         <div class="mobile-cover-meta">
             <span>UKG</span>
             <span>BASS</span>
@@ -1124,7 +1119,7 @@
 
         .mobile-cover-logo {
             display: block;
-            width: min(92%, 292px);
+            width: min(78%, 250px);
             height: auto;
             margin-left: -3px;
             filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.72));
@@ -1132,19 +1127,9 @@
 
         .home-mobile-cover h1 {
             margin: 8px 0 0;
-            font-size: clamp(108px, 36vw, 176px);
+            font-size: clamp(88px, 28vw, 148px);
             font-weight: 800;
             line-height: 0.76;
-            text-transform: uppercase;
-        }
-
-        .home-mobile-cover p {
-            max-width: 330px;
-            margin: 18px 0 0;
-            color: #d6d6d6;
-            font-size: 17px;
-            font-weight: 800;
-            line-height: 1.08;
             text-transform: uppercase;
         }
 
