@@ -3,6 +3,7 @@
     import { page } from '$app/stores';
     import { currentTab, isInstitutionalVisible, siteLanguage } from '$lib/stores/navigation';
     import { blackmesaHzPlaylist } from '$lib/data/blackmesaHz';
+    import { collectiveMembers } from '$lib/data/collective';
 
     type FeatureSlide = {
         topicPt: string;
@@ -26,6 +27,31 @@
     let latestArticle = $derived($page.data.playlistCardsData?.[0]);
     let latestEvent = $derived($page.data.eventsData?.slice(-1)[0]);
     let featuredArticles = $derived($page.data.playlistCardsData?.slice(0, 3) ?? []);
+    let signalImages = $derived(
+        [latestRelease?.image, latestArticle?.image, latestEvent?.image, blackmesaHzPlaylist.coverUrl].filter(Boolean)
+    );
+    let homeStats = $derived([
+        {
+            labelPt: 'Releases',
+            labelEn: 'Releases',
+            value: String($page.data.releasesData?.length ?? 0)
+        },
+        {
+            labelPt: 'Artigos',
+            labelEn: 'Articles',
+            value: String($page.data.playlistCardsData?.length ?? 0)
+        },
+        {
+            labelPt: 'Eventos',
+            labelEn: 'Events',
+            value: String($page.data.eventsData?.length ?? 0)
+        },
+        {
+            labelPt: 'Coletivo',
+            labelEn: 'Crew',
+            value: String(collectiveMembers.length)
+        }
+    ]);
     let featureSlides = $derived.by(() => {
         const slides: FeatureSlide[] = [];
 
@@ -257,6 +283,46 @@
                 </p>
             </div>
         {/if}
+    </section>
+
+    <section class="home-signal-band" aria-label="BLACKMESA signal">
+        <div class="signal-copy">
+            <span class="section-kicker">BLACKMESA SIGNAL</span>
+            <h2>{$siteLanguage === 'en' ? 'Bass pressure, visual memory and local transmission.' : 'Pressao bass, memoria visual e transmissao local.'}</h2>
+            <div class="signal-tags">
+                <span>UK GARAGE</span>
+                <span>BASS</span>
+                <span>DUBSTEP</span>
+                <span>BRASIL</span>
+            </div>
+        </div>
+
+        <div class="signal-stats">
+            {#each homeStats as stat}
+                <button
+                    class="signal-stat"
+                    type="button"
+                    onclick={() => {
+                        if (stat.labelEn === 'Releases') currentTab.set('releases');
+                        if (stat.labelEn === 'Articles') currentTab.set('playlists');
+                        if (stat.labelEn === 'Events') currentTab.set('events');
+                        if (stat.labelEn === 'Crew') openInstitutional();
+                    }}
+                >
+                    <strong>{stat.value}</strong>
+                    <span>{$siteLanguage === 'en' ? stat.labelEn : stat.labelPt}</span>
+                </button>
+            {/each}
+        </div>
+
+        <div class="signal-collage" aria-hidden="true">
+            {#each signalImages as image, index}
+                <span
+                    class="signal-frame frame-{index + 1}"
+                    style="background-image: url('{imageUrl(image)}')"
+                ></span>
+            {/each}
+        </div>
     </section>
 
     <section class="home-dashboard" aria-label="BLACKMESA dashboard">
@@ -670,6 +736,173 @@
         gap: 18px;
     }
 
+    .home-signal-band {
+        position: relative;
+        min-height: 210px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr) minmax(260px, 0.58fr);
+        gap: 18px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        background:
+            linear-gradient(90deg, rgba(119, 147, 131, 0.11), transparent 42%),
+            rgba(5, 5, 5, 0.9);
+        box-shadow: 0 0 0 1px rgba(119, 147, 131, 0.04), 0 24px 64px rgba(0, 0, 0, 0.48);
+    }
+
+    .home-signal-band::before {
+        content: "BLACKMESA";
+        position: absolute;
+        left: 18px;
+        bottom: -11px;
+        color: rgba(255, 255, 255, 0.035);
+        font-size: clamp(68px, 13vw, 180px);
+        font-weight: 800;
+        line-height: 0.8;
+        pointer-events: none;
+    }
+
+    .signal-copy {
+        position: relative;
+        z-index: 1;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-width: 0;
+    }
+
+    .signal-copy h2 {
+        max-width: 780px;
+        margin: 16px 0 0;
+        color: #ffffff;
+        font-size: clamp(28px, 4.6vw, 62px);
+        font-weight: 800;
+        line-height: 0.94;
+        text-transform: uppercase;
+    }
+
+    .signal-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 22px;
+    }
+
+    .signal-tags span {
+        min-height: 26px;
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        padding: 0 9px;
+        color: #d8d8d8;
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+    .signal-stats {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        border-left: 1px solid rgba(255, 255, 255, 0.08);
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .signal-stat {
+        min-width: 0;
+        border: 0;
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 18px;
+        background: rgba(255, 255, 255, 0.018);
+        color: #ffffff;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    .signal-stat:nth-child(2n) {
+        border-right: 0;
+    }
+
+    .signal-stat:nth-last-child(-n + 2) {
+        border-bottom: 0;
+    }
+
+    .signal-stat strong {
+        display: block;
+        color: var(--accent-color);
+        font-size: clamp(28px, 4vw, 48px);
+        font-weight: 800;
+        line-height: 0.9;
+    }
+
+    .signal-stat span {
+        display: block;
+        margin-top: 8px;
+        color: #bdbdbd;
+        font-size: 10px;
+        font-weight: 800;
+        line-height: 1;
+        text-transform: uppercase;
+    }
+
+    .signal-collage {
+        position: relative;
+        min-height: 210px;
+        overflow: hidden;
+        background: #050505;
+    }
+
+    .signal-frame {
+        position: absolute;
+        display: block;
+        background-size: cover;
+        background-position: center;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 18px 46px rgba(0, 0, 0, 0.56);
+        filter: contrast(1.05) saturate(0.92);
+    }
+
+    .frame-1 {
+        width: 64%;
+        height: 64%;
+        left: 10%;
+        top: 12%;
+        z-index: 3;
+        transform: rotate(-4deg);
+    }
+
+    .frame-2 {
+        width: 50%;
+        height: 48%;
+        right: 7%;
+        bottom: 10%;
+        z-index: 4;
+        transform: rotate(5deg);
+    }
+
+    .frame-3 {
+        width: 42%;
+        height: 42%;
+        right: 18%;
+        top: 7%;
+        z-index: 2;
+        opacity: 0.74;
+        transform: rotate(9deg);
+    }
+
+    .frame-4 {
+        width: 46%;
+        height: 46%;
+        left: 4%;
+        bottom: 6%;
+        z-index: 1;
+        opacity: 0.64;
+        transform: rotate(7deg);
+    }
+
     .home-panel {
         min-height: 310px;
         padding: 20px;
@@ -1057,6 +1290,110 @@
             border-radius: 16px;
             background: rgba(8, 8, 8, 0.94);
             box-shadow: 0 20px 64px rgba(0, 0, 0, 0.62);
+        }
+
+        .home-signal-band {
+            min-height: 0;
+            grid-template-columns: 1fr;
+            gap: 0;
+            border-radius: 16px;
+            background:
+                linear-gradient(180deg, rgba(119, 147, 131, 0.13), transparent 52%),
+                rgba(7, 7, 7, 0.94);
+        }
+
+        .home-signal-band::before {
+            left: 12px;
+            bottom: auto;
+            top: 150px;
+            font-size: 72px;
+        }
+
+        .signal-collage {
+            order: -1;
+            min-height: 170px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .frame-1 {
+            width: 58%;
+            height: 72%;
+            left: 8%;
+            top: 15%;
+        }
+
+        .frame-2 {
+            width: 42%;
+            height: 58%;
+            right: 7%;
+            bottom: 13%;
+        }
+
+        .frame-3 {
+            width: 35%;
+            height: 38%;
+            right: 25%;
+            top: 8%;
+        }
+
+        .frame-4 {
+            width: 34%;
+            height: 42%;
+            left: 4%;
+            bottom: 8%;
+        }
+
+        .signal-copy {
+            padding: 18px;
+        }
+
+        .signal-copy h2 {
+            margin-top: 12px;
+            font-size: clamp(27px, 9vw, 38px);
+            line-height: 0.95;
+        }
+
+        .signal-tags {
+            margin-top: 16px;
+            gap: 6px;
+        }
+
+        .signal-tags span {
+            min-height: 25px;
+            border-radius: 7px;
+            background: rgba(255, 255, 255, 0.035);
+        }
+
+        .signal-stats {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            border-left: 0;
+            border-right: 0;
+        }
+
+        .signal-stat {
+            min-height: 76px;
+            padding: 12px 8px;
+            text-align: center;
+            border-bottom: 0;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .signal-stat:nth-child(2n) {
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .signal-stat:last-child {
+            border-right: 0;
+        }
+
+        .signal-stat strong {
+            font-size: 26px;
+        }
+
+        .signal-stat span {
+            font-size: 9px;
+            line-height: 1.1;
         }
 
         .feature-media {
