@@ -1,9 +1,31 @@
 import { supabase } from '$lib/supabase';
+import { eventsData as fallbackEventsData } from '$lib/data/events';
 import { playlistCardsData } from '$lib/data/playlists';
+import { releasesData as fallbackReleasesData } from '$lib/data/releases';
 import type { LayoutLoad } from './$types';
 
 export const ssr = false;
 export const prerender = false;
+
+const SUPABASE_TIMEOUT_MS = 1800;
+
+type ReleaseLike = {
+    catalog: string;
+    artist: string;
+    image?: string;
+    image_url?: string | null;
+    embed?: string;
+    embed_html?: string | null;
+    credits?: string;
+    credits_html?: string | null;
+    [key: string]: unknown;
+};
+
+type EventLike = {
+    image?: string;
+    image_url?: string | null;
+    [key: string]: unknown;
+};
 
 function normalizeReleaseArtist(catalog: string, artist: string) {
     if (catalog === '[BM001]') return 'BLACKMESA';
@@ -19,31 +41,53 @@ function normalizeReleaseEmbed(catalog: string, embedHtml?: string | null) {
     );
 }
 
+function withTimeout<T>(promise: PromiseLike<T>, ms = SUPABASE_TIMEOUT_MS): Promise<T> {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Supabase request timed out')), ms);
+
+        Promise.resolve(promise)
+            .then(resolve)
+            .catch(reject)
+            .finally(() => clearTimeout(timeout));
+    });
+}
+
 export const load: LayoutLoad = async () => {
-    // Carregar releases (ordem descendente, assumindo que os mais recentes foram inseridos por último e mantêm ordem)
-    const { data: releases } = await supabase
-        .from('releases')
-        .select('*')
-        .order('catalog', { ascending: false });
+    const [releasesResult, eventsResult] = await Promise.allSettled([
+        withTimeout(
+            supabase
+                .from('releases')
+                .select('*')
+                .order('catalog', { ascending: false })
+        ),
+        withTimeout(
+            supabase
+                .from('events')
+                .select('*')
+                .order('created_at', { ascending: true })
+        )
+    ]);
 
-    // Carregar eventos (heróis e normais)
-    const { data: events } = await supabase
-        .from('events')
-        .select('*')
-        .order('created_at', { ascending: true }); // A ordem de inserção do mock foi do 18 ao 1. Ajuste se necessário.
+    const releases =
+        releasesResult.status === 'fulfilled' && releasesResult.value.data?.length
+            ? (releasesResult.value.data as ReleaseLike[])
+            : fallbackReleasesData;
+    const events =
+        eventsResult.status === 'fulfilled' && eventsResult.value.data?.length
+            ? (eventsResult.value.data as EventLike[])
+            : fallbackEventsData;
 
-    // Apenas garante um array vazio em caso de erro para não quebrar a UI
-    const mappedReleases = (releases || []).map(r => ({
+    const mappedReleases = releases.map(r => ({
         ...r,
         artist: normalizeReleaseArtist(r.catalog, r.artist),
-        image: r.image_url,
-        embed: normalizeReleaseEmbed(r.catalog, r.embed_html),
-        credits: r.credits_html
+        image: 'image_url' in r ? r.image_url : r.image,
+        embed: normalizeReleaseEmbed(r.catalog, 'embed_html' in r ? r.embed_html : r.embed),
+        credits: 'credits_html' in r ? r.credits_html : r.credits
     }));
 
-    const mappedEvents = (events || []).reverse().map(e => ({
+    const mappedEvents = events.slice().reverse().map(e => ({
         ...e,
-        image: e.image_url
+        image: 'image_url' in e ? e.image_url : e.image
     }));
 
     return {
