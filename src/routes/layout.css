@@ -1503,6 +1503,7 @@ body {
     flex: 0 0 auto;
     width: 130px;
     aspect-ratio: 4 / 5;
+    display: block;
     background-size: cover;
     background-position: center;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1512,6 +1513,7 @@ body {
     appearance: none;
     background-color: #111111;
     cursor: pointer;
+    text-decoration: none;
     transition: filter 0.3s ease, transform 0.3s ease;
     filter: grayscale(100%);
 }
@@ -1854,6 +1856,7 @@ body {
         background: var(--surface-muted);
         color: inherit;
         cursor: pointer;
+        text-decoration: none;
     }
 
     .mobile-feed-cover img {
@@ -1937,6 +1940,9 @@ body {
         width: 100%;
         min-height: 42px;
         margin-top: 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         border: 1px solid var(--line-strong);
         border-radius: 10px;
         background: rgba(255, 255, 255, 0.035);
@@ -1944,6 +1950,7 @@ body {
         font-family: var(--font-family);
         font-size: 12px;
         font-weight: 800;
+        text-decoration: none;
         text-transform: uppercase;
     }
 

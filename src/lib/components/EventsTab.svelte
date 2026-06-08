@@ -74,13 +74,14 @@
         <div id="events-list">
             {#each restEvents as event}
                 {#if event.link && event.link !== '#'}
-                    <button
+                    <a
                         class="event-mini"
-                        type="button"
                         aria-label={event.artist}
+                        href={event.link}
+                        target="_blank"
+                        rel="noreferrer"
                         style="background-image: url('{imageUrl(event.image)}')"
-                        onclick={() => window.open(event.link, '_blank')}
-                    ></button>
+                    ></a>
                 {:else}
                     <div
                         class="event-mini"

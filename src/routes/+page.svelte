@@ -448,23 +448,46 @@
 
         {#each activeData as data, i}
             <article class="mobile-feed-card" class:is-open={$expandedCardIndex === i}>
-                <button
-                    class="mobile-feed-cover"
-                    type="button"
-                    aria-label={data.artist || data.title || 'BLACKMESA'}
-                    onclick={() => onMobileFeedClick(i)}
-                >
-                    <img src={imageUrl(data.image)} alt="" loading={i > 0 ? "lazy" : "eager"} />
-                    <span class="mobile-feed-index">{String(i + 1).padStart(2, "0")}</span>
-                    <span class="mobile-feed-catalog">{data.catalog || "BLACKMESA"}</span>
-                </button>
+                {#if $currentTab === "playlists" && data.slug}
+                    <a
+                        class="mobile-feed-cover"
+                        href={`/playlists/${data.slug}`}
+                        aria-label={data.artist || data.title || 'BLACKMESA'}
+                        onclick={() => currentIndex.set(i)}
+                    >
+                        <img src={imageUrl(data.image)} alt="" loading={i > 0 ? "lazy" : "eager"} />
+                        <span class="mobile-feed-index">{String(i + 1).padStart(2, "0")}</span>
+                        <span class="mobile-feed-catalog">{data.catalog || "BLACKMESA"}</span>
+                    </a>
+                {:else}
+                    <button
+                        class="mobile-feed-cover"
+                        type="button"
+                        aria-label={data.artist || data.title || 'BLACKMESA'}
+                        onclick={() => onMobileFeedClick(i)}
+                    >
+                        <img src={imageUrl(data.image)} alt="" loading={i > 0 ? "lazy" : "eager"} />
+                        <span class="mobile-feed-index">{String(i + 1).padStart(2, "0")}</span>
+                        <span class="mobile-feed-catalog">{data.catalog || "BLACKMESA"}</span>
+                    </button>
+                {/if}
 
                 <div class="mobile-feed-copy">
                     <h3>{data.artist || data.title || "BLACKMESA"}</h3>
                     <p>{data.song || data.subtitle || "Publicação BLACKMESA Hz"}</p>
-                    <button class="mobile-feed-action" type="button" onclick={() => onMobileFeedClick(i)}>
-                        {mobileItemActionLabel(i)}
-                    </button>
+                    {#if $currentTab === "playlists" && data.slug}
+                        <a
+                            class="mobile-feed-action"
+                            href={`/playlists/${data.slug}`}
+                            onclick={() => currentIndex.set(i)}
+                        >
+                            {mobileItemActionLabel(i)}
+                        </a>
+                    {:else}
+                        <button class="mobile-feed-action" type="button" onclick={() => onMobileFeedClick(i)}>
+                            {mobileItemActionLabel(i)}
+                        </button>
+                    {/if}
                 </div>
 
                 {#if $currentTab === "releases" && $expandedCardIndex === i}
