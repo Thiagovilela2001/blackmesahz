@@ -173,21 +173,21 @@
         const viewportW = typeof window !== "undefined" ? window.innerWidth : 1024;
         const viewportH = typeof window !== "undefined" ? window.innerHeight : 768;
         const isMobile = viewportW <= 768;
-        const wrapperLeft = isMobile ? 24 : 180;
-        const baseW = isMobile ? Math.min(320, Math.max(248, viewportW - 48)) : 500;
-        const baseH = isMobile ? Math.round(baseW * 0.5) : 225;
+        const wrapperLeft = isMobile ? 16 : 180;
+        const baseW = isMobile ? Math.min(360, Math.max(260, viewportW - 32)) : 500;
+        const baseH = isMobile ? Math.round(baseW * 0.56) : 225;
         const deltaIndex = i - $currentIndex;
         const distance = Math.abs(deltaIndex);
-        const cardSpacingY = isMobile ? Math.min(218, Math.max(178, viewportH * 0.3)) : 240;
+        const cardSpacingY = isMobile ? Math.min(190, Math.max(150, viewportH * 0.24)) : 240;
         const centerYOffset = baseH / 2;
 
         if ($expandedCardIndex !== null) {
             if ($expandedCardIndex === i) {
                 const centerX = viewportW / 2;
                 const targetW = isMobile ? Math.min(viewportW - 24, viewportW * 0.94) : Math.min(1200, viewportW * 0.95);
-                const targetH = isMobile ? Math.max(260, Math.min(viewportH - 96, viewportH * 0.76)) : 550;
+                const targetH = isMobile ? Math.max(300, Math.min(viewportH - 132, viewportH * 0.7)) : 550;
                 const moveX = centerX - wrapperLeft - targetW / 2;
-                const moveY = -(targetH / 2) + (isMobile ? 18 : 15);
+                const moveY = -(targetH / 2) + (isMobile ? 34 : 15);
                 return `width:${targetW}px;height:${targetH}px;transform:translate3d(${moveX}px,${moveY}px,0) rotateZ(0deg);z-index:100;opacity:1;pointer-events:auto;`;
             } else {
                 const extraPush = Math.sign(deltaIndex) * 200;
