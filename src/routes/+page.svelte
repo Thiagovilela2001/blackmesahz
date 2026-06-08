@@ -152,6 +152,26 @@
         return "Abrir release";
     }
 
+    function onMobileFeedClick(i: number) {
+        currentIndex.set(i);
+
+        if ($currentTab === "playlists") {
+            const card = $page.data.playlistCardsData[i];
+            if (card?.slug) {
+                goto(`/playlists/${card.slug}`);
+            }
+            return;
+        }
+
+        if ($expandedCardIndex === i) {
+            stopAllMedia();
+            expandedCardIndex.set(null);
+            return;
+        }
+
+        expandedCardIndex.set(i);
+    }
+
     function onCardClick(i: number) {
         if ($isAnimating) return;
 
@@ -432,7 +452,7 @@
                     class="mobile-feed-cover"
                     type="button"
                     aria-label={data.artist || data.title || 'BLACKMESA'}
-                    onclick={() => onCardClick(i)}
+                    onclick={() => onMobileFeedClick(i)}
                 >
                     <img src={imageUrl(data.image)} alt="" loading={i > 0 ? "lazy" : "eager"} />
                     <span class="mobile-feed-index">{String(i + 1).padStart(2, "0")}</span>
@@ -442,7 +462,7 @@
                 <div class="mobile-feed-copy">
                     <h3>{data.artist || data.title || "BLACKMESA"}</h3>
                     <p>{data.song || data.subtitle || "Publicação BLACKMESA Hz"}</p>
-                    <button class="mobile-feed-action" type="button" onclick={() => onCardClick(i)}>
+                    <button class="mobile-feed-action" type="button" onclick={() => onMobileFeedClick(i)}>
                         {mobileItemActionLabel(i)}
                     </button>
                 </div>
