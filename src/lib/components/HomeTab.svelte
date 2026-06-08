@@ -1124,9 +1124,9 @@
 
         .mobile-cover-logo {
             display: block;
-            width: min(100%, 340px);
+            width: min(92%, 292px);
             height: auto;
-            margin-left: -6px;
+            margin-left: -3px;
             filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.72));
         }
 
