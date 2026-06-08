@@ -32,6 +32,11 @@
         };
     }
 
+    function imageUrl(path?: string) {
+        if (!path) return "";
+        return path.startsWith("http") || path.startsWith("/") ? path : `/${path}`;
+    }
+
     let heroData = $derived($page.data.eventsData[0]);
     let dateInfo = $derived(heroData ? formatDate(heroData.catalog) : { dateStr: "", isUpcoming: false });
     let restEvents = $derived($page.data.eventsData.slice(1));
@@ -40,7 +45,7 @@
 <div id="events-wrapper" style="display: flex">
     {#if heroData}
         <div id="events-hero">
-            <div class="hero-img" style="background-image: url('/{heroData.image}')"></div>
+            <div class="hero-img" style="background-image: url('{imageUrl(heroData.image)}')"></div>
             <div class="hero-info">
                 {#if dateInfo.isUpcoming}
                     <span class="event-badge">EM BREVE</span>
@@ -73,7 +78,7 @@
                         class="event-mini"
                         type="button"
                         aria-label={event.artist}
-                        style="background-image: url('/{event.image}')"
+                        style="background-image: url('{imageUrl(event.image)}')"
                         onclick={() => window.open(event.link, '_blank')}
                     ></button>
                 {:else}
@@ -81,7 +86,7 @@
                         class="event-mini"
                         role="img"
                         aria-label={event.artist}
-                        style="background-image: url('/{event.image}')"
+                        style="background-image: url('{imageUrl(event.image)}')"
                     ></div>
                 {/if}
             {/each}

@@ -41,6 +41,10 @@ function normalizeReleaseEmbed(catalog: string, embedHtml?: string | null) {
     );
 }
 
+function resolveImage(primary?: string | null, fallback?: string | null) {
+    return primary || fallback || '';
+}
+
 function withTimeout<T>(promise: PromiseLike<T>, ms = SUPABASE_TIMEOUT_MS): Promise<T> {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => reject(new Error('Supabase request timed out')), ms);
@@ -80,14 +84,14 @@ export const load: LayoutLoad = async () => {
     const mappedReleases = releases.map(r => ({
         ...r,
         artist: normalizeReleaseArtist(r.catalog, r.artist),
-        image: 'image_url' in r ? r.image_url : r.image,
+        image: resolveImage('image_url' in r ? r.image_url : undefined, r.image),
         embed: normalizeReleaseEmbed(r.catalog, 'embed_html' in r ? r.embed_html : r.embed),
         credits: 'credits_html' in r ? r.credits_html : r.credits
     }));
 
     const mappedEvents = events.slice().reverse().map(e => ({
         ...e,
-        image: 'image_url' in e ? e.image_url : e.image
+        image: resolveImage('image_url' in e ? e.image_url : undefined, e.image)
     }));
 
     return {
