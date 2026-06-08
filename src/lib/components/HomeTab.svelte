@@ -1101,12 +1101,12 @@
         }
 
         .home-mobile-cover {
-            min-height: min(52vh, 430px);
+            min-height: min(32vh, 250px);
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
             order: -3;
-            padding: 34px 0 18px;
+            padding: 24px 0 18px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.16);
             color: #ffffff;
         }
@@ -1166,10 +1166,11 @@
         }
 
         .mobile-index-row {
+            position: relative;
             width: 100%;
             min-height: 84px;
             display: grid;
-            grid-template-columns: 28px minmax(0, 1fr);
+            grid-template-columns: 28px minmax(0, 1fr) 20px;
             align-items: center;
             column-gap: 10px;
             border: 0;
@@ -1181,10 +1182,30 @@
             text-align: left;
             text-decoration: none;
             text-transform: uppercase;
+            transition: background-color 0.14s ease;
+        }
+
+        .mobile-index-row:active {
+            background: rgba(119, 147, 131, 0.06);
         }
 
         .mobile-index-row:last-child {
             border-bottom: 0;
+        }
+
+        .mobile-index-row::after {
+            content: "→";
+            grid-column: 3;
+            grid-row: 1;
+            color: var(--accent-color);
+            font-size: 14px;
+            opacity: 0.55;
+            transition: opacity 0.14s ease, transform 0.14s ease;
+        }
+
+        .mobile-index-row:active::after {
+            opacity: 1;
+            transform: translateX(2px);
         }
 
         .mobile-index-row span {
@@ -1205,7 +1226,7 @@
         }
 
         .mobile-index-row small {
-            grid-column: 2;
+            grid-column: 2 / 4;
             display: block;
             margin-top: 7px;
             overflow: hidden;
@@ -1266,7 +1287,10 @@
             max-width: 100%;
         }
 
-        .feature-copy p,
+        .feature-copy p {
+            display: none;
+        }
+
         .home-panel p {
             font-size: 14px;
             line-height: 1.5;
@@ -1290,18 +1314,14 @@
         }
 
         .feature-carousel-head {
-            flex-direction: column;
+            flex-direction: row;
+            align-items: center;
             gap: 12px;
         }
 
-        .feature-carousel-controls {
-            width: 100%;
-        }
-
         .feature-nav-btn {
-            flex: 1;
-            height: 38px;
-            border-radius: 9px;
+            height: 34px;
+            border-radius: 8px;
             background: rgba(255, 255, 255, 0.035);
         }
 
