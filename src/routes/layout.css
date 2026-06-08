@@ -1783,6 +1783,10 @@ body {
         display: none;
     }
 
+    #click-outside-overlay {
+        display: none !important;
+    }
+
     #mobile-card-feed {
         position: fixed;
         top: 126px;
