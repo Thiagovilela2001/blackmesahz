@@ -1039,33 +1039,59 @@
 
     @media (max-width: 768px) {
         #home-wrapper {
-            top: 72px;
-            height: calc(100vh - 120px);
-            height: calc(100dvh - 120px);
-            padding: 14px 12px 62px;
+            top: 88px;
+            height: calc(100vh - 136px);
+            height: calc(100dvh - 136px);
+            padding: 14px 14px 64px;
             gap: 14px;
-            background-size: 32px 32px;
+            background:
+                linear-gradient(180deg, rgba(119, 147, 131, 0.1), transparent 260px),
+                linear-gradient(90deg, rgba(255,255,255,0.026) 1px, transparent 1px),
+                linear-gradient(180deg, rgba(255,255,255,0.026) 1px, transparent 1px),
+                #000000;
+            background-size: auto, 32px 32px, 32px 32px, auto;
         }
 
         .home-feature {
             min-height: auto;
-            border-radius: 12px;
+            border-radius: 16px;
+            background: rgba(8, 8, 8, 0.94);
+            box-shadow: 0 20px 64px rgba(0, 0, 0, 0.62);
         }
 
         .feature-media {
-            min-height: 210px;
-            aspect-ratio: 16 / 10;
+            min-height: 230px;
+            aspect-ratio: 4 / 3;
+            border-bottom-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .feature-media::after {
+            background:
+                linear-gradient(180deg, transparent 38%, rgba(0,0,0,0.82)),
+                linear-gradient(90deg, rgba(119, 147, 131, 0.16), transparent 56%);
+        }
+
+        .feature-index {
+            left: 12px;
+            bottom: 12px;
+            min-height: 26px;
+            border-radius: 7px;
+            background: rgba(0, 0, 0, 0.76);
+            backdrop-filter: blur(10px);
+            font-size: 11px;
         }
 
         .feature-copy,
         .home-panel {
-            padding: 18px 16px;
-            border-radius: 12px;
+            padding: 18px;
+            border-radius: 16px;
+            background: rgba(8, 8, 8, 0.92);
         }
 
         .feature-copy h1 {
-            font-size: clamp(30px, 10vw, 40px);
-            line-height: 1;
+            margin-top: 10px;
+            font-size: clamp(32px, 11vw, 46px);
+            line-height: 0.94;
             overflow-wrap: anywhere;
         }
 
@@ -1077,11 +1103,24 @@
         .feature-copy p,
         .home-panel p {
             font-size: 14px;
-            line-height: 1.45;
+            line-height: 1.5;
+            color: #b8b8b8;
+        }
+
+        .feature-meta {
+            gap: 6px;
+        }
+
+        .feature-meta span,
+        .panel-count {
+            min-height: 26px;
+            border-radius: 7px;
+            background: rgba(255, 255, 255, 0.035);
         }
 
         .feature-actions {
             flex-direction: column;
+            gap: 8px;
         }
 
         .feature-carousel-head {
@@ -1095,11 +1134,30 @@
 
         .feature-nav-btn {
             flex: 1;
+            height: 38px;
+            border-radius: 9px;
+            background: rgba(255, 255, 255, 0.035);
+        }
+
+        .feature-dots {
+            margin-top: 18px;
+            gap: 6px;
+        }
+
+        .feature-dot {
+            flex: 1;
+            height: 5px;
+            border-radius: 999px;
         }
 
         .bm-btn,
         .hz-actions {
             width: 100%;
+        }
+
+        .bm-btn {
+            min-height: 42px;
+            border-radius: 9px;
         }
 
         .hz-actions {
@@ -1116,7 +1174,26 @@
         }
 
         .home-spotify-embed {
-            min-height: 132px;
+            min-height: 142px;
+            border-radius: 14px;
+        }
+
+        .article-row {
+            min-height: 72px;
+            grid-template-columns: 28px 58px minmax(0, 1fr);
+            gap: 10px;
+            padding: 10px 0;
+        }
+
+        .article-thumb {
+            width: 58px;
+            height: 58px;
+            border-radius: 10px;
+        }
+
+        .about-topic {
+            min-height: 58px;
+            padding: 14px 0;
         }
 
         .about-topic {
