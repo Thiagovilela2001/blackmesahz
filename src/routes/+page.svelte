@@ -141,6 +141,17 @@
         isPlaylistArticleOpen.set(false);
     }
 
+    function imageUrl(path?: string) {
+        if (!path) return "";
+        return path.startsWith("http") || path.startsWith("/") ? path : `/${path}`;
+    }
+
+    function mobileItemActionLabel(index: number) {
+        if ($currentTab === "playlists") return "Ler artigo";
+        if ($expandedCardIndex === index) return "Fechar release";
+        return "Abrir release";
+    }
+
     function onCardClick(i: number) {
         if ($isAnimating) return;
 
@@ -286,6 +297,8 @@
     }
 
     function handleTouchEnd(e: TouchEvent) {
+        if (typeof window !== "undefined" && window.innerWidth <= 768) return;
+
         if (
             $expandedCardIndex !== null ||
             $isAnimating ||
@@ -407,6 +420,50 @@
 
 <!-- Cards Wrapper (Releases & Articles) -->
 {#if showCardUI && !$isPlaylistArticleOpen}
+    <div id="mobile-card-feed">
+        <div class="mobile-feed-intro">
+            <span>{activeData.length} registros</span>
+            <strong>{$currentTab === "playlists" ? "Editorial BLACKMESA Hz" : "Catálogo BLACKMESA"}</strong>
+        </div>
+
+        {#each activeData as data, i}
+            <article class="mobile-feed-card" class:is-open={$expandedCardIndex === i}>
+                <button
+                    class="mobile-feed-cover"
+                    type="button"
+                    aria-label={data.artist || data.title || 'BLACKMESA'}
+                    onclick={() => onCardClick(i)}
+                >
+                    <img src={imageUrl(data.image)} alt="" loading={i > 0 ? "lazy" : "eager"} />
+                    <span class="mobile-feed-index">{String(i + 1).padStart(2, "0")}</span>
+                    <span class="mobile-feed-catalog">{data.catalog || "BLACKMESA"}</span>
+                </button>
+
+                <div class="mobile-feed-copy">
+                    <h3>{data.artist || data.title || "BLACKMESA"}</h3>
+                    <p>{data.song || data.subtitle || "Publicação BLACKMESA Hz"}</p>
+                    <button class="mobile-feed-action" type="button" onclick={() => onCardClick(i)}>
+                        {mobileItemActionLabel(i)}
+                    </button>
+                </div>
+
+                {#if $currentTab === "releases" && $expandedCardIndex === i}
+                    <div class="mobile-release-panel">
+                        {#if "embed" in data && data.embed}
+                            <div class="mobile-release-embed">{@html data.embed}</div>
+                        {/if}
+                        {#if "credits" in data && data.credits}
+                            <div class="mobile-release-credits">
+                                <strong>Créditos</strong>
+                                {@html data.credits}
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
+            </article>
+        {/each}
+    </div>
+
     <div id="cards-wrapper">
         {#each activeData as data, i}
             <div
