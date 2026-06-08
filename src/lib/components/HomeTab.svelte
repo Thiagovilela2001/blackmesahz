@@ -1123,16 +1123,17 @@
         }
 
         .mobile-cover-kicker {
+            display: block;
             color: var(--accent-color);
-            font-size: 12px;
+            font-size: clamp(42px, 13vw, 68px);
             font-weight: 800;
-            line-height: 1;
+            line-height: 0.82;
             text-transform: uppercase;
         }
 
         .home-mobile-cover h1 {
-            margin: 8px 0 0;
-            font-size: clamp(116px, 39vw, 190px);
+            margin: 4px 0 0;
+            font-size: clamp(108px, 36vw, 176px);
             font-weight: 800;
             line-height: 0.76;
             text-transform: uppercase;
@@ -1213,11 +1214,11 @@
 
         .mobile-index-row {
             width: 100%;
-            min-height: 92px;
+            min-height: 84px;
             display: grid;
-            grid-template-columns: 34px minmax(0, 1fr);
+            grid-template-columns: 28px minmax(0, 1fr);
             align-items: center;
-            column-gap: 12px;
+            column-gap: 10px;
             border: 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.16);
             padding: 12px 0;
@@ -1245,9 +1246,9 @@
             min-width: 0;
             display: block;
             overflow-wrap: anywhere;
-            font-size: clamp(42px, 14vw, 64px);
+            font-size: clamp(36px, 11vw, 50px);
             font-weight: 800;
-            line-height: 0.88;
+            line-height: 0.9;
         }
 
         .mobile-index-row small {
@@ -1264,11 +1265,11 @@
         }
 
         .mobile-index-row.is-large {
-            min-height: 118px;
+            min-height: 96px;
         }
 
         .mobile-index-row.is-large strong {
-            font-size: clamp(58px, 18vw, 86px);
+            font-size: clamp(42px, 12vw, 56px);
         }
 
         .feature-media {
