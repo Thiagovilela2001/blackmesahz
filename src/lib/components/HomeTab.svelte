@@ -198,7 +198,7 @@
 
 <div id="home-wrapper">
     <section class="home-mobile-cover" aria-label="BLACKMESA mobile cover">
-        <span class="mobile-cover-kicker">BLACKMESA</span>
+        <img class="mobile-cover-logo" src="/logo/long.webp" alt="BLACKMESA" />
         <h1>Hz</h1>
         <p>
             {$siteLanguage === 'en'
@@ -1122,17 +1122,16 @@
             color: #ffffff;
         }
 
-        .mobile-cover-kicker {
+        .mobile-cover-logo {
             display: block;
-            color: var(--accent-color);
-            font-size: clamp(42px, 13vw, 68px);
-            font-weight: 800;
-            line-height: 0.82;
-            text-transform: uppercase;
+            width: min(100%, 340px);
+            height: auto;
+            margin-left: -6px;
+            filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.72));
         }
 
         .home-mobile-cover h1 {
-            margin: 4px 0 0;
+            margin: 8px 0 0;
             font-size: clamp(108px, 36vw, 176px);
             font-weight: 800;
             line-height: 0.76;
