@@ -200,12 +200,6 @@
     <section class="home-mobile-cover" aria-label="BLACKMESA mobile cover">
         <img class="mobile-cover-logo" src="/logo/long.webp" alt="BLACKMESA" />
         <h1>Hz</h1>
-        <div class="mobile-cover-meta">
-            <span>UKG</span>
-            <span>BASS</span>
-            <span>DUBSTEP</span>
-            <span>BR</span>
-        </div>
     </section>
 
     <section class="home-mobile-index" aria-label="BLACKMESA mobile index">
@@ -1131,31 +1125,6 @@
             font-weight: 800;
             line-height: 0.76;
             text-transform: uppercase;
-        }
-
-        .mobile-cover-meta {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 0;
-            margin-top: 24px;
-            border-top: 1px solid rgba(255, 255, 255, 0.16);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.16);
-        }
-
-        .mobile-cover-meta span {
-            min-height: 34px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-right: 1px solid rgba(255, 255, 255, 0.16);
-            color: #ffffff;
-            font-size: 10px;
-            font-weight: 800;
-            line-height: 1;
-        }
-
-        .mobile-cover-meta span:last-child {
-            border-right: 0;
         }
 
         .home-feature {
