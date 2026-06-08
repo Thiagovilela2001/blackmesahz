@@ -197,6 +197,22 @@
 </script>
 
 <div id="home-wrapper">
+    <section class="home-mobile-cover" aria-label="BLACKMESA mobile cover">
+        <span class="mobile-cover-kicker">BLACKMESA</span>
+        <h1>Hz</h1>
+        <p>
+            {$siteLanguage === 'en'
+                ? 'Bass, radio, releases, articles and events from the Brazilian underground.'
+                : 'Bass, radio, releases, artigos e eventos do underground brasileiro.'}
+        </p>
+        <div class="mobile-cover-meta">
+            <span>UKG</span>
+            <span>BASS</span>
+            <span>DUBSTEP</span>
+            <span>BR</span>
+        </div>
+    </section>
+
     <section class="home-mobile-index" aria-label="BLACKMESA mobile index">
         <div class="mobile-index-head">
             <span>BLACKMESA Hz</span>
@@ -204,22 +220,22 @@
         </div>
         <button class="mobile-index-row is-large" type="button" onclick={goToReleases}>
             <span>01</span>
-            <strong>{latestRelease?.song ?? 'Releases'}</strong>
-            <small>{latestRelease?.artist ?? 'Catalogo BLACKMESA'}</small>
+            <strong>Releases</strong>
+            <small>{latestRelease ? `${latestRelease.artist} / ${latestRelease.song}` : 'Catalogo BLACKMESA'}</small>
         </button>
         <button class="mobile-index-row" type="button" onclick={goToArticles}>
             <span>02</span>
-            <strong>{latestArticle?.artist ?? 'Artigos'}</strong>
-            <small>{latestArticle?.song ?? 'BLACKMESA Hz'}</small>
+            <strong>Artigos</strong>
+            <small>{latestArticle ? `${latestArticle.artist} / ${latestArticle.song}` : 'BLACKMESA Hz'}</small>
         </button>
         <button class="mobile-index-row" type="button" onclick={goToEvents}>
             <span>03</span>
-            <strong>{latestEvent?.artist ?? 'Eventos'}</strong>
+            <strong>Eventos</strong>
             <small>{latestEvent?.location || latestEvent?.song || 'Agenda'}</small>
         </button>
         <a class="mobile-index-row" href={blackmesaHzPlaylist.externalUrl} target="_blank" rel="noreferrer">
             <span>04</span>
-            <strong>{blackmesaHzPlaylist.title}</strong>
+            <strong>Radio</strong>
             <small>{blackmesaHzPlaylist.platform} / {$siteLanguage === 'en' ? blackmesaHzPlaylist.labelEn : blackmesaHzPlaylist.labelPt}</small>
         </a>
     </section>
@@ -709,6 +725,10 @@
         display: none;
     }
 
+    .home-mobile-cover {
+        display: none;
+    }
+
     .home-panel {
         min-height: 310px;
         padding: 20px;
@@ -1081,14 +1101,76 @@
             top: 88px;
             height: calc(100vh - 136px);
             height: calc(100dvh - 136px);
-            padding: 14px 14px 64px;
-            gap: 14px;
+            padding: 0 14px 64px;
+            gap: 18px;
             background:
                 linear-gradient(180deg, rgba(119, 147, 131, 0.1), transparent 260px),
                 linear-gradient(90deg, rgba(255,255,255,0.026) 1px, transparent 1px),
                 linear-gradient(180deg, rgba(255,255,255,0.026) 1px, transparent 1px),
                 #000000;
             background-size: auto, 32px 32px, 32px 32px, auto;
+        }
+
+        .home-mobile-cover {
+            min-height: min(52vh, 430px);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            order: -3;
+            padding: 34px 0 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+            color: #ffffff;
+        }
+
+        .mobile-cover-kicker {
+            color: var(--accent-color);
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 1;
+            text-transform: uppercase;
+        }
+
+        .home-mobile-cover h1 {
+            margin: 8px 0 0;
+            font-size: clamp(116px, 39vw, 190px);
+            font-weight: 800;
+            line-height: 0.76;
+            text-transform: uppercase;
+        }
+
+        .home-mobile-cover p {
+            max-width: 330px;
+            margin: 18px 0 0;
+            color: #d6d6d6;
+            font-size: 17px;
+            font-weight: 800;
+            line-height: 1.08;
+            text-transform: uppercase;
+        }
+
+        .mobile-cover-meta {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0;
+            margin-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.16);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+        }
+
+        .mobile-cover-meta span {
+            min-height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid rgba(255, 255, 255, 0.16);
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .mobile-cover-meta span:last-child {
+            border-right: 0;
         }
 
         .home-feature {
@@ -1131,7 +1213,7 @@
 
         .mobile-index-row {
             width: 100%;
-            min-height: 82px;
+            min-height: 92px;
             display: grid;
             grid-template-columns: 34px minmax(0, 1fr);
             align-items: center;
@@ -1163,7 +1245,7 @@
             min-width: 0;
             display: block;
             overflow-wrap: anywhere;
-            font-size: clamp(30px, 10vw, 43px);
+            font-size: clamp(42px, 14vw, 64px);
             font-weight: 800;
             line-height: 0.88;
         }
@@ -1182,11 +1264,11 @@
         }
 
         .mobile-index-row.is-large {
-            min-height: 124px;
+            min-height: 118px;
         }
 
         .mobile-index-row.is-large strong {
-            font-size: clamp(42px, 14vw, 64px);
+            font-size: clamp(58px, 18vw, 86px);
         }
 
         .feature-media {
