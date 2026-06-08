@@ -197,6 +197,33 @@
 </script>
 
 <div id="home-wrapper">
+    <section class="home-mobile-index" aria-label="BLACKMESA mobile index">
+        <div class="mobile-index-head">
+            <span>BLACKMESA Hz</span>
+            <strong>{$siteLanguage === 'en' ? 'Editorial index' : 'Indice editorial'}</strong>
+        </div>
+        <button class="mobile-index-row is-large" type="button" onclick={goToReleases}>
+            <span>01</span>
+            <strong>{latestRelease?.song ?? 'Releases'}</strong>
+            <small>{latestRelease?.artist ?? 'Catalogo BLACKMESA'}</small>
+        </button>
+        <button class="mobile-index-row" type="button" onclick={goToArticles}>
+            <span>02</span>
+            <strong>{latestArticle?.artist ?? 'Artigos'}</strong>
+            <small>{latestArticle?.song ?? 'BLACKMESA Hz'}</small>
+        </button>
+        <button class="mobile-index-row" type="button" onclick={goToEvents}>
+            <span>03</span>
+            <strong>{latestEvent?.artist ?? 'Eventos'}</strong>
+            <small>{latestEvent?.location || latestEvent?.song || 'Agenda'}</small>
+        </button>
+        <a class="mobile-index-row" href={blackmesaHzPlaylist.externalUrl} target="_blank" rel="noreferrer">
+            <span>04</span>
+            <strong>{blackmesaHzPlaylist.title}</strong>
+            <small>{blackmesaHzPlaylist.platform} / {$siteLanguage === 'en' ? blackmesaHzPlaylist.labelEn : blackmesaHzPlaylist.labelPt}</small>
+        </a>
+    </section>
+
     <section
         class="home-feature"
         aria-label="Destaques BLACKMESA"
@@ -265,33 +292,6 @@
                 </p>
             </div>
         {/if}
-    </section>
-
-    <section class="home-mobile-index" aria-label="BLACKMESA mobile index">
-        <div class="mobile-index-head">
-            <span>BLACKMESA Hz</span>
-            <strong>{$siteLanguage === 'en' ? 'Editorial index' : 'Indice editorial'}</strong>
-        </div>
-        <button class="mobile-index-row is-large" type="button" onclick={goToReleases}>
-            <span>01</span>
-            <strong>{latestRelease?.song ?? 'Releases'}</strong>
-            <small>{latestRelease?.artist ?? 'Catalogo BLACKMESA'}</small>
-        </button>
-        <button class="mobile-index-row" type="button" onclick={goToArticles}>
-            <span>02</span>
-            <strong>{latestArticle?.artist ?? 'Artigos'}</strong>
-            <small>{latestArticle?.song ?? 'BLACKMESA Hz'}</small>
-        </button>
-        <button class="mobile-index-row" type="button" onclick={goToEvents}>
-            <span>03</span>
-            <strong>{latestEvent?.artist ?? 'Eventos'}</strong>
-            <small>{latestEvent?.location || latestEvent?.song || 'Agenda'}</small>
-        </button>
-        <a class="mobile-index-row" href={blackmesaHzPlaylist.externalUrl} target="_blank" rel="noreferrer">
-            <span>04</span>
-            <strong>{blackmesaHzPlaylist.title}</strong>
-            <small>{blackmesaHzPlaylist.platform} / {$siteLanguage === 'en' ? blackmesaHzPlaylist.labelEn : blackmesaHzPlaylist.labelPt}</small>
-        </a>
     </section>
 
     <section class="home-dashboard" aria-label="BLACKMESA dashboard">
@@ -1096,6 +1096,7 @@
             border-radius: 16px;
             background: rgba(8, 8, 8, 0.94);
             box-shadow: 0 20px 64px rgba(0, 0, 0, 0.62);
+            order: -1;
         }
 
         .home-mobile-index {
@@ -1103,6 +1104,7 @@
             border-top: 1px solid rgba(255, 255, 255, 0.16);
             border-bottom: 1px solid rgba(255, 255, 255, 0.16);
             background: #000000;
+            order: -2;
         }
 
         .mobile-index-head {
@@ -1188,8 +1190,8 @@
         }
 
         .feature-media {
-            min-height: 230px;
-            aspect-ratio: 4 / 3;
+            min-height: 170px;
+            aspect-ratio: 16 / 9;
             border-bottom-color: rgba(255, 255, 255, 0.12);
         }
 
@@ -1218,7 +1220,7 @@
 
         .feature-copy h1 {
             margin-top: 10px;
-            font-size: clamp(32px, 11vw, 46px);
+            font-size: clamp(28px, 9vw, 38px);
             line-height: 0.94;
             overflow-wrap: anywhere;
         }
