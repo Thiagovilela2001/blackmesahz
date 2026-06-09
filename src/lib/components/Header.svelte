@@ -62,6 +62,7 @@
         <a
             href="https://soundcloud.com/blackmesaent"
             target="_blank"
+            rel="noopener noreferrer"
             title="Soundcloud"
         >
             <i class="fa-brands fa-soundcloud"></i>
@@ -70,6 +71,7 @@
         <a
             href="https://blackmesaent.bandcamp.com"
             target="_blank"
+            rel="noopener noreferrer"
             title="Bandcamp"
         >
             <i class="fa-brands fa-bandcamp"></i>
@@ -78,6 +80,7 @@
         <a
             href="https://instagram.com/blackmesaent"
             target="_blank"
+            rel="noopener noreferrer"
             title="Instagram"
         >
             <i class="fa-brands fa-instagram"></i>

@@ -2,6 +2,8 @@ import { supabase } from '$lib/supabase';
 import { eventsData as fallbackEventsData } from '$lib/data/events';
 import { playlistCardsData } from '$lib/data/playlists';
 import { releasesData as fallbackReleasesData } from '$lib/data/releases';
+import { articleRowToCard, type ArticleRow } from '$lib/articles';
+import { safeExternalUrl, safeImageUrl, sanitizeTrustedHtml } from '$lib/security';
 import type { LayoutLoad } from './$types';
 
 export const ssr = false;
@@ -42,7 +44,7 @@ function normalizeReleaseEmbed(catalog: string, embedHtml?: string | null) {
 }
 
 function resolveImage(primary?: string | null, fallback?: string | null) {
-    return primary || fallback || '';
+    return safeImageUrl(primary || fallback || '');
 }
 
 function withTimeout<T>(promise: PromiseLike<T>, ms = SUPABASE_TIMEOUT_MS): Promise<T> {
@@ -57,7 +59,7 @@ function withTimeout<T>(promise: PromiseLike<T>, ms = SUPABASE_TIMEOUT_MS): Prom
 }
 
 export const load: LayoutLoad = async () => {
-    const [releasesResult, eventsResult] = await Promise.allSettled([
+    const [releasesResult, eventsResult, articlesResult] = await Promise.allSettled([
         withTimeout(
             supabase
                 .from('releases')
@@ -69,6 +71,13 @@ export const load: LayoutLoad = async () => {
                 .from('events')
                 .select('*')
                 .order('created_at', { ascending: true })
+        ),
+        withTimeout(
+            supabase
+                .from('articles')
+                .select('slug,title,subtitle,issue,category,genre,hero_image,published,created_at')
+                .eq('published', true)
+                .order('created_at', { ascending: false })
         )
     ]);
 
@@ -80,23 +89,30 @@ export const load: LayoutLoad = async () => {
         eventsResult.status === 'fulfilled' && eventsResult.value.data?.length
             ? (eventsResult.value.data as EventLike[])
             : fallbackEventsData;
+    const articles =
+        articlesResult.status === 'fulfilled' && articlesResult.value.data?.length
+            ? (articlesResult.value.data as ArticleRow[])
+            : [];
 
     const mappedReleases = releases.map(r => ({
         ...r,
         artist: normalizeReleaseArtist(r.catalog, r.artist),
         image: resolveImage('image_url' in r ? r.image_url : undefined, r.image),
-        embed: normalizeReleaseEmbed(r.catalog, 'embed_html' in r ? r.embed_html : r.embed),
-        credits: 'credits_html' in r ? r.credits_html : r.credits
+        embed: sanitizeTrustedHtml(
+            normalizeReleaseEmbed(r.catalog, 'embed_html' in r ? r.embed_html : r.embed)
+        ),
+        credits: sanitizeTrustedHtml('credits_html' in r ? r.credits_html : r.credits)
     }));
 
     const mappedEvents = events.slice().reverse().map(e => ({
         ...e,
-        image: resolveImage('image_url' in e ? e.image_url : undefined, e.image)
+        image: resolveImage('image_url' in e ? e.image_url : undefined, e.image),
+        link: safeExternalUrl(typeof e.link === 'string' ? e.link : undefined)
     }));
 
     return {
         releasesData: mappedReleases,
         eventsData: mappedEvents,
-        playlistCardsData
+        playlistCardsData: articles.length ? articles.map(articleRowToCard) : playlistCardsData
     };
 };

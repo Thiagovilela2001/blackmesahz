@@ -68,3 +68,121 @@ INSERT INTO events (catalog, artist, song, image_url, link, location, is_hero) V
 -- Allow anon read access to events
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read access to events" ON events FOR SELECT USING (true);
+
+
+-- Article admin allowlist
+CREATE TABLE article_admins (
+    email TEXT PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE article_admins ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Admins can read admin allowlist" ON article_admins
+FOR SELECT
+USING (email = (auth.jwt() ->> 'email'));
+
+
+-- Editorial articles managed from the frontend admin
+CREATE TABLE articles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    slug TEXT UNIQUE NOT NULL CHECK (slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
+    title TEXT NOT NULL,
+    subtitle TEXT,
+    publication TEXT DEFAULT 'BLACKMESA Hz' NOT NULL,
+    issue TEXT,
+    category TEXT DEFAULT 'Artigo' NOT NULL,
+    author TEXT DEFAULT 'BLACKMESA' NOT NULL,
+    article_date TEXT,
+    genre TEXT,
+    hero_image TEXT,
+    hero_alt TEXT,
+    soundcloud_url TEXT,
+    content_markdown TEXT DEFAULT '' NOT NULL,
+    credits TEXT[] DEFAULT ARRAY[]::TEXT[] NOT NULL,
+    gallery JSONB DEFAULT '[]'::jsonb NOT NULL,
+    published BOOLEAN DEFAULT false NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX articles_published_created_at_idx ON articles (published, created_at DESC);
+
+ALTER TABLE articles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read access to published articles" ON articles
+FOR SELECT
+USING (published = true);
+
+CREATE POLICY "Allow admins read access to all articles" ON articles
+FOR SELECT
+USING (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+);
+
+CREATE POLICY "Allow admins insert articles" ON articles
+FOR INSERT
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+);
+
+CREATE POLICY "Allow admins update articles" ON articles
+FOR UPDATE
+USING (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+);
+
+
+-- Public article image uploads. Create the bucket here, then upload through /admin.
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('article-images', 'article-images', true)
+ON CONFLICT (id) DO UPDATE SET public = EXCLUDED.public;
+
+CREATE POLICY "Allow public read access to article images" ON storage.objects
+FOR SELECT
+USING (bucket_id = 'article-images');
+
+CREATE POLICY "Allow admins upload article images" ON storage.objects
+FOR INSERT
+WITH CHECK (
+    bucket_id = 'article-images'
+    AND EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+);
+
+CREATE POLICY "Allow admins update article images" ON storage.objects
+FOR UPDATE
+USING (
+    bucket_id = 'article-images'
+    AND EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+)
+WITH CHECK (
+    bucket_id = 'article-images'
+    AND EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+);
+
+-- After creating your Supabase Auth user, add your email:
+-- INSERT INTO article_admins (email) VALUES ('voce@seudominio.com');

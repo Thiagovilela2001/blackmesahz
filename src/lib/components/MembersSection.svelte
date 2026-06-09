@@ -5,6 +5,7 @@
         roleLabels,
         type CollectiveFilter
     } from '$lib/data/collective';
+    import { safeExternalUrl } from '$lib/security';
 
     let activeFilter = $state<CollectiveFilter>('all');
 
@@ -69,7 +70,7 @@
                     {/each}
                 </div>
 
-                <a href={member.soundcloudUrl} target="_blank" rel="noreferrer" class="member-link">
+                <a href={safeExternalUrl(member.soundcloudUrl)} target="_blank" rel="noopener noreferrer" class="member-link">
                     <i class="fa-brands fa-soundcloud"></i>
                     SoundCloud
                 </a>

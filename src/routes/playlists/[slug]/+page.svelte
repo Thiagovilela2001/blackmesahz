@@ -5,18 +5,24 @@
     import { currentIndex, expandedCardIndex, isAnimating, isPlaylistArticleOpen } from '$lib/stores/cards';
     import ImageLightbox from '$lib/components/ImageLightbox.svelte';
     import SubHeader from '$lib/components/SubHeader.svelte';
+    import { safeExternalUrl, safeImageUrl } from '$lib/security';
 
     let { data } = $props();
     let Content = $derived(data.content);
+    let soundcloudUrl = $derived(safeExternalUrl(data.meta.soundcloudUrl, ''));
     let soundcloudEmbedUrl = $derived(
-        data.meta.soundcloudUrl
-            ? `https://w.soundcloud.com/player/?url=${encodeURIComponent(data.meta.soundcloudUrl)}&color=%23779383&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`
+        soundcloudUrl
+            ? `https://w.soundcloud.com/player/?url=${encodeURIComponent(soundcloudUrl)}&color=%23779383&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`
             : ''
     );
     let lightbox: ImageLightbox;
     let carouselIndex = $state(0);
     let carouselTouchStartX = 0;
     let carouselTouchStartY = 0;
+
+    function imageUrl(path?: string) {
+        return safeImageUrl(path);
+    }
     let suppressCarouselClick = false;
 
     function prevSlide() {
@@ -131,14 +137,14 @@
                 {/each}
             </div>
 
-            {#if data.meta.heroImage}
+            {#if imageUrl(data.meta.heroImage)}
                 <figure class="playlist-hero-image">
                     <!-- svelte-ignore a11y_click_events_have_key_events -->
                     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                     <img
-                        src={data.meta.heroImage}
+                        src={imageUrl(data.meta.heroImage)}
                         alt={data.meta.heroAlt || 'Hero Image'}
-                        onclick={() => openLightbox(data.meta.heroImage, data.meta.heroAlt || '')}
+                        onclick={() => openLightbox(imageUrl(data.meta.heroImage), data.meta.heroAlt || '')}
                     >
                     {#if data.meta.heroAlt}
                         <figcaption class="playlist-image-caption">{data.meta.heroAlt}</figcaption>
@@ -146,11 +152,11 @@
                 </figure>
             {/if}
 
-            {#if data.meta.soundcloudUrl}
+            {#if soundcloudUrl}
                 <section class="playlist-soundcloud-player" aria-label="Player SoundCloud">
                     <div class="playlist-soundcloud-header">
                         <span>Escute aqui</span>
-                        <a href={data.meta.soundcloudUrl} target="_blank" rel="noreferrer">
+                        <a href={soundcloudUrl} target="_blank" rel="noopener noreferrer">
                             Abrir no SoundCloud
                             <i class="fa-brands fa-soundcloud"></i>
                         </a>
@@ -168,7 +174,11 @@
             {/if}
 
             <div class="playlist-article-body">
-                <Content />
+                {#if Content}
+                    <Content />
+                {:else if data.contentHtml}
+                    {@html data.contentHtml}
+                {/if}
             </div>
 
             {#if data.meta.gallery?.length}
@@ -186,10 +196,10 @@
                                     <!-- svelte-ignore a11y_click_events_have_key_events -->
                                     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                                     <img
-                                        src={image.src}
+                                        src={imageUrl(image.src)}
                                         alt={image.alt}
                                         loading="lazy"
-                                        onclick={(event) => openCarouselImage(event, image.src, image.alt)}
+                                        onclick={(event) => openCarouselImage(event, imageUrl(image.src), image.alt)}
                                     >
                                     <figcaption class="playlist-image-caption">{image.alt}</figcaption>
                                 </figure>

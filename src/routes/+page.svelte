@@ -14,6 +14,7 @@
         isAnimating,
         isPlaylistArticleOpen,
     } from "$lib/stores/cards";
+    import { safeImageUrl } from "$lib/security";
     import { page } from "$app/stores";
 
     let lightbox: ImageLightbox;
@@ -142,8 +143,7 @@
     }
 
     function imageUrl(path?: string) {
-        if (!path) return "";
-        return path.startsWith("http") || path.startsWith("/") ? path : `/${path}`;
+        return safeImageUrl(path);
     }
 
     function mobileItemActionLabel(index: number) {

@@ -1,5 +1,5 @@
 export const radioData = {
-    streamUrl: 'http://localhost:8000/stream.mp3',
+    streamUrl: '',
     station: 'BLACKMESA Hz',
     location: 'São Paulo / Online',
     currentShow: {

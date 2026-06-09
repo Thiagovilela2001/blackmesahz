@@ -3,6 +3,7 @@
     import { page } from '$app/stores';
     import { currentTab, isInstitutionalVisible, siteLanguage } from '$lib/stores/navigation';
     import { blackmesaHzPlaylist } from '$lib/data/blackmesaHz';
+    import { safeExternalUrl, safeImageUrl } from '$lib/security';
 
     type FeatureSlide = {
         topicPt: string;
@@ -122,8 +123,7 @@
     ];
 
     function imageUrl(path?: string) {
-        if (!path) return '';
-        return path.startsWith('http') || path.startsWith('/') ? path : `/${path}`;
+        return safeImageUrl(path);
     }
 
     function setFeature(index: number) {
@@ -222,7 +222,7 @@
             <strong>Eventos</strong>
             <small>{latestEvent?.location || latestEvent?.song || 'Agenda'}</small>
         </button>
-        <a class="mobile-index-row" href={blackmesaHzPlaylist.externalUrl} target="_blank" rel="noreferrer">
+        <a class="mobile-index-row" href={safeExternalUrl(blackmesaHzPlaylist.externalUrl)} target="_blank" rel="noopener noreferrer">
             <span>04</span>
             <strong>Radio</strong>
             <small>{blackmesaHzPlaylist.platform} / {$siteLanguage === 'en' ? blackmesaHzPlaylist.labelEn : blackmesaHzPlaylist.labelPt}</small>
@@ -340,7 +340,7 @@
                 </div>
             </div>
             <div class="hz-actions">
-                <a class="bm-btn is-primary" href={blackmesaHzPlaylist.externalUrl} target="_blank" rel="noreferrer">
+                <a class="bm-btn is-primary" href={safeExternalUrl(blackmesaHzPlaylist.externalUrl)} target="_blank" rel="noopener noreferrer">
                     <i class="fa-solid fa-list"></i>
                     {$siteLanguage === 'en' ? 'Open playlist' : 'Abrir playlist'}
                 </a>

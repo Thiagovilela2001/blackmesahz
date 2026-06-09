@@ -1,5 +1,6 @@
 <script lang="ts">
     import { page } from "$app/stores";
+    import { safeExternalUrl, safeImageUrl } from "$lib/security";
 
     function formatDate(catalog: string): {
         dateStr: string;
@@ -33,8 +34,11 @@
     }
 
     function imageUrl(path?: string) {
-        if (!path) return "";
-        return path.startsWith("http") || path.startsWith("/") ? path : `/${path}`;
+        return safeImageUrl(path);
+    }
+
+    function eventLink(link?: string) {
+        return safeExternalUrl(link);
     }
 
     let heroData = $derived($page.data.eventsData[0]);
@@ -61,9 +65,9 @@
                 {/if}
 
                 <a
-                    href={heroData.link}
+                    href={eventLink(heroData.link)}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     class="event-action"
                 >Mais Informações</a>
             </div>
@@ -73,13 +77,13 @@
     {#if restEvents.length > 0}
         <div id="events-list">
             {#each restEvents as event}
-                {#if event.link && event.link !== '#'}
+                {#if eventLink(event.link) !== '#'}
                     <a
                         class="event-mini"
                         aria-label={event.artist}
-                        href={event.link}
+                        href={eventLink(event.link)}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         style="background-image: url('{imageUrl(event.image)}')"
                     ></a>
                 {:else}
