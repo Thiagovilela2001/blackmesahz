@@ -1,8 +1,7 @@
 <script lang="ts">
-    import { env } from '$env/dynamic/public';
     import { supabase } from '$lib/supabase';
 
-    type RadioTrackRow = {
+    type TrackRow = {
         id: string;
         title: string;
         artist: string;
@@ -14,7 +13,7 @@
         published: boolean;
     };
 
-    type RadioForm = {
+    type TrackForm = {
         title: string;
         artist: string;
         artwork: string;
@@ -24,7 +23,22 @@
         published: boolean;
     };
 
-    const emptyForm: RadioForm = {
+    type RadioSettings = {
+        station: string;
+        location: string;
+        stream_url: string;
+        mode: 'live' | 'archive';
+        live_label: string;
+        current_series: string;
+        current_title: string;
+        current_description: string;
+        current_host: string;
+        live_artist: string;
+        live_artwork: string;
+        tags: string;
+    };
+
+    const emptyTrackForm: TrackForm = {
         title: '',
         artist: '',
         artwork: '/capa_quinzenal.png',
@@ -34,16 +48,19 @@
         published: true
     };
 
-    let form = $state<RadioForm>({ ...emptyForm });
+    let radioTab = $state<'tracks' | 'settings'>('tracks');
+    let tracks = $state<TrackRow[]>([]);
+    let trackForm = $state<TrackForm>({ ...emptyTrackForm });
+    let editingTrackId = $state<string | null>(null);
     let audioFile = $state<File | null>(null);
-    let tracks = $state<RadioTrackRow[]>([]);
-    let isLoading = $state(false);
-    let isUploading = $state(false);
+    let settings = $state<RadioSettings | null>(null);
+    let isLoadingTracks = $state(false);
+    let isLoadingSettings = $state(false);
+    let isSavingTrack = $state(false);
+    let isSavingSettings = $state(false);
     let isDeleting = $state(false);
     let statusMessage = $state('');
     let errorMessage = $state('');
-
-    const radioApiUrl = $derived((env.PUBLIC_RADIO_API_URL || '').trim().replace(/\/$/, ''));
 
     function clearMessages() {
         statusMessage = '';
@@ -55,195 +72,388 @@
         audioFile = input.files?.[0] || null;
     }
 
-    async function getToken() {
-        const session = await supabase.auth.getSession();
-        const token = session.data.session?.access_token?.trim().replace(/[^A-Za-z0-9._-]/g, '');
-        if (!token) throw new Error('Sessao expirada. Entre novamente no admin.');
-        return token;
+    function startEdit(track: TrackRow) {
+        editingTrackId = track.id;
+        trackForm = {
+            title: track.title,
+            artist: track.artist,
+            artwork: track.artwork || '/capa_quinzenal.png',
+            genre: track.genre || '',
+            release: track.release || 'BLACKMESA Hz',
+            sort_order: track.sort_order,
+            published: track.published
+        };
+        audioFile = null;
+        clearMessages();
     }
 
-    async function apiFetch(path: string, init: RequestInit = {}) {
-        if (!radioApiUrl) {
-            throw new Error('Configure PUBLIC_RADIO_API_URL na Vercel para ativar o upload da radio.');
-        }
-
-        const token = await getToken();
-        const headers = new Headers();
-        headers.set('Authorization', `Bearer ${token}`);
-
-        const response = await fetch(`${radioApiUrl}${path}`, {
-            method: init.method || 'GET',
-            body: init.body,
-            headers
-        });
-
-        if (!response.ok) {
-            const body = await response.json().catch(() => null);
-            throw new Error(body?.error || `API da radio respondeu ${response.status}.`);
-        }
-
-        if (response.status === 204) return null;
-        return response.json();
+    function cancelEdit() {
+        editingTrackId = null;
+        trackForm = { ...emptyTrackForm };
+        audioFile = null;
+        clearMessages();
     }
 
     async function loadTracks() {
         clearMessages();
-        isLoading = true;
-
+        isLoadingTracks = true;
         try {
-            const body = await apiFetch('/radio/tracks');
-            tracks = body.tracks || [];
-        } catch (error) {
-            errorMessage = error instanceof Error ? error.message : 'Nao foi possivel carregar as musicas.';
+            const { data, error } = await supabase
+                .from('radio_tracks')
+                .select('*')
+                .order('sort_order', { ascending: true });
+            if (error) throw error;
+            tracks = (data || []) as TrackRow[];
+        } catch (err) {
+            errorMessage = err instanceof Error ? err.message : 'Nao foi possivel carregar as musicas.';
         } finally {
-            isLoading = false;
+            isLoadingTracks = false;
         }
     }
 
-    async function uploadTrack() {
+    async function uploadAudio(): Promise<string> {
+        if (!audioFile) throw new Error('Nenhum arquivo selecionado.');
+        const session = await supabase.auth.getSession();
+        const uid = session.data.session?.user?.id;
+        if (!uid) throw new Error('Sessao expirada. Entre novamente.');
+        const ext = audioFile.name.split('.').pop()?.toLowerCase() || 'mp3';
+        const path = `${uid}/${Date.now()}.${ext}`;
+        const { error } = await supabase.storage
+            .from('radio-audio')
+            .upload(path, audioFile, { cacheControl: '31536000', upsert: false });
+        if (error) throw error;
+        const { data } = supabase.storage.from('radio-audio').getPublicUrl(path);
+        return data.publicUrl;
+    }
+
+    async function saveTrack() {
         clearMessages();
-
-        if (!audioFile) {
-            errorMessage = 'Escolha um arquivo de audio.';
-            return;
-        }
-
-        if (!form.title.trim() || !form.artist.trim()) {
+        if (!trackForm.title.trim() || !trackForm.artist.trim()) {
             errorMessage = 'Preencha titulo e artista.';
             return;
         }
-
-        isUploading = true;
-
+        isSavingTrack = true;
         try {
-            const data = new FormData();
-            data.set('audio', audioFile);
-            data.set('title', form.title.trim());
-            data.set('artist', form.artist.trim());
-            data.set('artwork', form.artwork.trim());
-            data.set('genre', form.genre.trim());
-            data.set('release', form.release.trim());
-            data.set('sort_order', String(form.sort_order || 0));
-            data.set('published', String(form.published));
+            const payload: Record<string, unknown> = {
+                title: trackForm.title.trim(),
+                artist: trackForm.artist.trim(),
+                artwork: trackForm.artwork.trim() || null,
+                genre: trackForm.genre.trim() || null,
+                release: trackForm.release.trim() || null,
+                sort_order: trackForm.sort_order || 0,
+                published: trackForm.published,
+                updated_at: new Date().toISOString()
+            };
 
-            await apiFetch('/radio/tracks/upload', {
-                method: 'POST',
-                body: data
-            });
+            if (audioFile) {
+                payload.src = await uploadAudio();
+            } else if (!editingTrackId) {
+                errorMessage = 'Escolha um arquivo de audio.';
+                return;
+            }
 
-            form = { ...emptyForm };
-            audioFile = null;
-            statusMessage = 'Musica enviada para a radio.';
+            const result = editingTrackId
+                ? await supabase.from('radio_tracks').update(payload).eq('id', editingTrackId)
+                : await supabase.from('radio_tracks').insert(payload);
+
+            if (result.error) throw result.error;
+            statusMessage = editingTrackId ? 'Musica atualizada.' : 'Musica adicionada a radio.';
+            cancelEdit();
             await loadTracks();
-        } catch (error) {
-            errorMessage = error instanceof Error ? error.message : 'Nao foi possivel enviar a musica.';
+        } catch (err) {
+            errorMessage = err instanceof Error ? err.message : 'Nao foi possivel salvar a musica.';
         } finally {
-            isUploading = false;
+            isSavingTrack = false;
         }
     }
 
-    async function deleteTrack(track: RadioTrackRow) {
-        const confirmed = window.confirm(`Excluir "${track.title}" da radio?`);
-        if (!confirmed) return;
-
+    async function deleteTrack(track: TrackRow) {
+        if (!window.confirm(`Excluir "${track.title}" da radio?`)) return;
         clearMessages();
         isDeleting = true;
-
         try {
-            await apiFetch(`/radio/tracks/${track.id}`, { method: 'DELETE' });
-            statusMessage = 'Musica removida da radio.';
+            const { error } = await supabase.from('radio_tracks').delete().eq('id', track.id);
+            if (error) throw error;
+            if (editingTrackId === track.id) cancelEdit();
+            statusMessage = 'Musica removida.';
             await loadTracks();
-        } catch (error) {
-            errorMessage = error instanceof Error ? error.message : 'Nao foi possivel excluir a musica.';
+        } catch (err) {
+            errorMessage = err instanceof Error ? err.message : 'Nao foi possivel excluir a musica.';
         } finally {
             isDeleting = false;
         }
     }
 
+    async function loadSettings() {
+        clearMessages();
+        isLoadingSettings = true;
+        try {
+            const { data, error } = await supabase
+                .from('radio_settings')
+                .select('*')
+                .eq('id', 'main')
+                .maybeSingle();
+            if (error) throw error;
+            if (data) {
+                settings = {
+                    station: data.station || 'BLACKMESA Hz',
+                    location: data.location || 'Sao Paulo / Online',
+                    stream_url: data.stream_url || '',
+                    mode: data.mode === 'archive' ? 'archive' : 'live',
+                    live_label: data.live_label || 'ON AIR:',
+                    current_series: data.current_series || '',
+                    current_title: data.current_title || '',
+                    current_description: data.current_description || '',
+                    current_host: data.current_host || '',
+                    live_artist: data.live_artist || '',
+                    live_artwork: data.live_artwork || '/capa_quinzenal.png',
+                    tags: (data.tags || []).join(', ')
+                };
+            }
+        } catch (err) {
+            errorMessage = err instanceof Error ? err.message : 'Nao foi possivel carregar as configuracoes.';
+        } finally {
+            isLoadingSettings = false;
+        }
+    }
+
+    async function saveSettings() {
+        if (!settings) return;
+        clearMessages();
+        isSavingSettings = true;
+        try {
+            const tags = settings.tags
+                .split(',')
+                .map(t => t.trim())
+                .filter(Boolean);
+            const payload = {
+                station: settings.station.trim(),
+                location: settings.location.trim(),
+                stream_url: settings.stream_url.trim(),
+                mode: settings.mode,
+                live_label: settings.live_label.trim(),
+                current_series: settings.current_series.trim(),
+                current_title: settings.current_title.trim(),
+                current_description: settings.current_description.trim(),
+                current_host: settings.current_host.trim(),
+                live_artist: settings.live_artist.trim(),
+                live_artwork: settings.live_artwork.trim() || null,
+                tags,
+                updated_at: new Date().toISOString()
+            };
+            const { error } = await supabase.from('radio_settings').update(payload).eq('id', 'main');
+            if (error) throw error;
+            statusMessage = 'Configuracoes salvas.';
+        } catch (err) {
+            errorMessage = err instanceof Error ? err.message : 'Nao foi possivel salvar as configuracoes.';
+        } finally {
+            isSavingSettings = false;
+        }
+    }
+
     $effect(() => {
-        if (radioApiUrl) loadTracks();
+        if (radioTab === 'tracks') {
+            loadTracks();
+        } else {
+            loadSettings();
+        }
     });
 </script>
 
 <section class="radio-admin">
-    <div class="radio-admin-head">
+    <div class="radio-head">
         <div>
             <span>BLACKMESA Hz</span>
-            <h2>Upload de musicas</h2>
+            <h2>Radio admin</h2>
         </div>
-        <button type="button" class="ghost-btn" disabled={isLoading || !radioApiUrl} onclick={loadTracks}>
-            {isLoading ? 'Carregando...' : 'Atualizar'}
-        </button>
+        <div class="head-tabs">
+            <button
+                type="button"
+                class="ghost-btn"
+                class:active={radioTab === 'tracks'}
+                onclick={() => radioTab = 'tracks'}
+            >Musicas</button>
+            <button
+                type="button"
+                class="ghost-btn"
+                class:active={radioTab === 'settings'}
+                onclick={() => radioTab = 'settings'}
+            >Configuracoes</button>
+            {#if radioTab === 'tracks'}
+                <button
+                    type="button"
+                    class="ghost-btn"
+                    disabled={isLoadingTracks}
+                    onclick={loadTracks}
+                >{isLoadingTracks ? 'Carregando...' : 'Atualizar'}</button>
+            {/if}
+        </div>
     </div>
 
-    {#if !radioApiUrl}
-        <p class="radio-warning">Configure PUBLIC_RADIO_API_URL na Vercel para conectar o painel ao backend da Oracle.</p>
-    {/if}
-
-    <form class="radio-form" onsubmit={(event) => { event.preventDefault(); uploadTrack(); }}>
-        <div class="form-grid">
-            <label class="span-2">
-                Arquivo de audio
-                <input type="file" accept="audio/*" onchange={setAudioFile}>
-            </label>
-            <label>
-                Titulo
-                <input bind:value={form.title} required>
-            </label>
-            <label>
-                Artista
-                <input bind:value={form.artist} required>
-            </label>
-            <label class="span-2">
-                Capa
-                <input bind:value={form.artwork} placeholder="/capa_quinzenal.png ou https://...">
-            </label>
-            <label>
-                Genero
-                <input bind:value={form.genre}>
-            </label>
-            <label>
-                Lancamento
-                <input bind:value={form.release}>
-            </label>
-            <label>
-                Ordem
-                <input type="number" bind:value={form.sort_order}>
-            </label>
-            <label class="check-row">
-                <input type="checkbox" bind:checked={form.published}>
-                Publicada
-            </label>
-        </div>
-
-        <div class="admin-actions">
-            <p class="file-hint">{audioFile ? audioFile.name : 'Nenhum arquivo selecionado.'}</p>
-            <button type="submit" class="primary-btn" disabled={isUploading || !radioApiUrl}>
-                {isUploading ? 'Enviando...' : 'Enviar musica'}
-            </button>
-        </div>
-    </form>
-
-    <section class="track-list" aria-label="Musicas cadastradas">
-        <h2>Musicas cadastradas</h2>
-        {#if tracks.length}
-            {#each tracks as track}
-                <div class="track-row">
-                    <a href={track.src} target="_blank" rel="noopener noreferrer">
-                        <span>{track.title}</span>
-                        <small>
-                            {track.artist}
-                            {track.genre ? ` / ${track.genre}` : ''}
-                            {track.published ? ' / publicada' : ' / rascunho'}
-                        </small>
-                    </a>
-                    <button type="button" class="danger-btn" disabled={isDeleting} onclick={() => deleteTrack(track)}>Excluir</button>
+    {#if radioTab === 'tracks'}
+        <form class="track-form" onsubmit={(e) => { e.preventDefault(); saveTrack(); }}>
+            <h3>{editingTrackId ? 'Editar musica' : 'Adicionar musica'}</h3>
+            <div class="form-grid">
+                <label>
+                    Titulo
+                    <input bind:value={trackForm.title} required>
+                </label>
+                <label>
+                    Artista
+                    <input bind:value={trackForm.artist} required>
+                </label>
+                <label class="span-2">
+                    Capa
+                    <input bind:value={trackForm.artwork} placeholder="/capa_quinzenal.png ou https://...">
+                </label>
+                <label>
+                    Genero
+                    <input bind:value={trackForm.genre}>
+                </label>
+                <label>
+                    Lancamento
+                    <input bind:value={trackForm.release}>
+                </label>
+                <label>
+                    Ordem
+                    <input type="number" bind:value={trackForm.sort_order}>
+                </label>
+                <label class="check-row">
+                    <input type="checkbox" bind:checked={trackForm.published}>
+                    Publicada
+                </label>
+                <label class="span-2">
+                    Arquivo de audio {editingTrackId ? '(deixe vazio para manter o atual)' : '*'}
+                    <input type="file" accept="audio/*" onchange={setAudioFile}>
+                </label>
+            </div>
+            <div class="form-actions">
+                <p class="file-hint">{audioFile ? audioFile.name : 'Nenhum arquivo selecionado.'}</p>
+                <div class="action-buttons">
+                    {#if editingTrackId}
+                        <button type="button" class="ghost-btn" onclick={cancelEdit}>Cancelar</button>
+                    {/if}
+                    <button type="submit" class="primary-btn" disabled={isSavingTrack}>
+                        {isSavingTrack ? 'Salvando...' : editingTrackId ? 'Atualizar' : 'Adicionar musica'}
+                    </button>
                 </div>
-            {/each}
+            </div>
+        </form>
+
+        <section class="track-list" aria-label="Musicas cadastradas">
+            <h3>Musicas cadastradas</h3>
+            {#if tracks.length}
+                {#each tracks as track}
+                    <div class="track-row">
+                        <a href={track.src} target="_blank" rel="noopener noreferrer">
+                            <span>{track.title}</span>
+                            <small>
+                                {track.artist}
+                                {track.genre ? ` / ${track.genre}` : ''}
+                                {track.published ? ' / publicada' : ' / rascunho'}
+                                / ordem {track.sort_order}
+                            </small>
+                        </a>
+                        <div class="row-actions">
+                            <button
+                                type="button"
+                                class="ghost-btn"
+                                onclick={() => startEdit(track)}
+                            >Editar</button>
+                            <button
+                                type="button"
+                                class="danger-btn"
+                                disabled={isDeleting}
+                                onclick={() => deleteTrack(track)}
+                            >Excluir</button>
+                        </div>
+                    </div>
+                {/each}
+            {:else}
+                <p class="radio-muted">
+                    {isLoadingTracks ? 'Carregando musicas...' : 'Nenhuma musica cadastrada.'}
+                </p>
+            {/if}
+        </section>
+    {:else if radioTab === 'settings'}
+        {#if isLoadingSettings}
+            <p class="radio-muted">Carregando configuracoes...</p>
+        {:else if settings}
+            <form class="settings-form" onsubmit={(e) => { e.preventDefault(); saveSettings(); }}>
+                <h3>Transmissao ao vivo</h3>
+                <div class="form-grid">
+                    <label class="span-2">
+                        URL do stream
+                        <input bind:value={settings.stream_url} placeholder="http://127.0.0.1:8000/blackmesa.mp3">
+                    </label>
+                    <label>
+                        Modo
+                        <select bind:value={settings.mode}>
+                            <option value="live">Ao vivo</option>
+                            <option value="archive">Arquivo</option>
+                        </select>
+                    </label>
+                    <label>
+                        Label ao vivo
+                        <input bind:value={settings.live_label} placeholder="ON AIR:">
+                    </label>
+                </div>
+
+                <h3>Show atual</h3>
+                <div class="form-grid">
+                    <label>
+                        Serie
+                        <input bind:value={settings.current_series}>
+                    </label>
+                    <label>
+                        Titulo
+                        <input bind:value={settings.current_title}>
+                    </label>
+                    <label>
+                        Host
+                        <input bind:value={settings.current_host}>
+                    </label>
+                    <label>
+                        Artista ao vivo
+                        <input bind:value={settings.live_artist}>
+                    </label>
+                    <label class="span-2">
+                        Descricao
+                        <textarea bind:value={settings.current_description} rows="3"></textarea>
+                    </label>
+                    <label class="span-2">
+                        Capa ao vivo
+                        <input bind:value={settings.live_artwork} placeholder="/capa_quinzenal.png ou https://...">
+                    </label>
+                </div>
+
+                <h3>Estacao</h3>
+                <div class="form-grid">
+                    <label>
+                        Nome
+                        <input bind:value={settings.station}>
+                    </label>
+                    <label>
+                        Localizacao
+                        <input bind:value={settings.location}>
+                    </label>
+                    <label class="span-2">
+                        Tags (separadas por virgula)
+                        <input bind:value={settings.tags} placeholder="UK Bass, Dubstep, Garage">
+                    </label>
+                </div>
+
+                <div class="form-actions">
+                    <span></span>
+                    <button type="submit" class="primary-btn" disabled={isSavingSettings}>
+                        {isSavingSettings ? 'Salvando...' : 'Salvar configuracoes'}
+                    </button>
+                </div>
+            </form>
         {:else}
-            <p class="radio-muted">{isLoading ? 'Carregando musicas...' : 'Nenhuma musica cadastrada.'}</p>
+            <p class="radio-muted">Nao foi possivel carregar as configuracoes.</p>
         {/if}
-    </section>
+    {/if}
 
     {#if statusMessage}
         <p class="status-message">{statusMessage}</p>
@@ -259,23 +469,17 @@
         gap: 22px;
     }
 
-    .radio-admin-head,
-    .admin-actions,
-    .track-row {
+    .radio-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 16px;
-    }
-
-    .radio-admin-head {
         border-bottom: 1px solid rgba(0, 0, 0, 0.16);
         padding-bottom: 18px;
     }
 
-    .radio-admin-head span,
+    .radio-head span,
     .radio-muted,
-    .radio-warning,
     .track-row small,
     label,
     button,
@@ -293,9 +497,25 @@
         text-transform: uppercase;
     }
 
-    .radio-form {
+    h3 {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        padding-bottom: 8px;
+    }
+
+    .head-tabs {
+        display: flex;
+        gap: 8px;
+    }
+
+    .track-form,
+    .settings-form {
         display: grid;
-        gap: 18px;
+        gap: 16px;
     }
 
     .form-grid {
@@ -313,7 +533,9 @@
         grid-column: span 2;
     }
 
-    input {
+    input,
+    textarea,
+    select {
         width: 100%;
         border: 1px solid rgba(0, 0, 0, 0.22);
         background: #ffffff;
@@ -326,6 +548,15 @@
         text-transform: none;
     }
 
+    textarea {
+        resize: vertical;
+        line-height: 1.45;
+    }
+
+    select {
+        cursor: pointer;
+    }
+
     .check-row {
         display: flex;
         grid-auto-flow: column;
@@ -335,6 +566,56 @@
 
     .check-row input {
         width: auto;
+    }
+
+    .form-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    .file-hint {
+        margin: 0;
+        color: #555555;
+    }
+
+    .track-list {
+        border-top: 1px solid rgba(0, 0, 0, 0.16);
+        padding-top: 20px;
+        display: grid;
+        gap: 0;
+    }
+
+    .track-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        padding: 12px 0;
+    }
+
+    .track-row a {
+        min-width: 0;
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .track-row span {
+        display: block;
+        font-weight: 800;
+    }
+
+    .row-actions {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
     }
 
     .primary-btn,
@@ -356,6 +637,11 @@
         color: #111111;
     }
 
+    .ghost-btn.active {
+        background: #111111;
+        color: #ffffff;
+    }
+
     .danger-btn {
         background: #f3d5d0;
         border-color: #9f3225;
@@ -369,33 +655,6 @@
         cursor: progress;
     }
 
-    .file-hint {
-        margin: 0;
-        color: #555555;
-    }
-
-    .track-list {
-        border-top: 1px solid rgba(0, 0, 0, 0.16);
-        padding-top: 20px;
-    }
-
-    .track-row {
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-        padding: 12px 0;
-    }
-
-    .track-row a {
-        min-width: 0;
-        color: inherit;
-        text-decoration: none;
-    }
-
-    .track-row span {
-        display: block;
-        font-weight: 800;
-    }
-
-    .radio-warning,
     .status-message,
     .error-message {
         margin: 0;
@@ -403,10 +662,6 @@
         padding: 12px;
         font-size: 13px;
         font-weight: 700;
-    }
-
-    .radio-warning {
-        background: #fff3c7;
     }
 
     .status-message {
@@ -418,19 +673,25 @@
     }
 
     @media (max-width: 720px) {
+        .radio-head,
+        .form-actions,
+        .track-row {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .head-tabs,
+        .action-buttons,
+        .row-actions {
+            width: 100%;
+        }
+
         .form-grid {
             grid-template-columns: 1fr;
         }
 
         .span-2 {
             grid-column: auto;
-        }
-
-        .radio-admin-head,
-        .admin-actions,
-        .track-row {
-            align-items: flex-start;
-            flex-direction: column;
         }
 
         .primary-btn,

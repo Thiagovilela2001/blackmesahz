@@ -321,6 +321,35 @@ WITH CHECK (
 -- INSERT INTO article_admins (email) VALUES ('voce@seudominio.com');
 
 
+-- BLACKMESA Hz radio audio storage
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('radio-audio', 'radio-audio', true)
+ON CONFLICT (id) DO UPDATE SET public = EXCLUDED.public;
+
+CREATE POLICY "Allow public read access to radio audio" ON storage.objects
+FOR SELECT USING (bucket_id = 'radio-audio');
+
+CREATE POLICY "Allow admins upload radio audio" ON storage.objects
+FOR INSERT
+WITH CHECK (
+    bucket_id = 'radio-audio'
+    AND EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+);
+
+CREATE POLICY "Allow admins delete radio audio" ON storage.objects
+FOR DELETE
+USING (
+    bucket_id = 'radio-audio'
+    AND EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+);
+
+
 -- BLACKMESA Hz radio catalog
 CREATE TABLE IF NOT EXISTS radio_settings (
     id TEXT PRIMARY KEY DEFAULT 'main' CHECK (id = 'main'),
