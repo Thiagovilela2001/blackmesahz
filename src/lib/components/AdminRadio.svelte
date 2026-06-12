@@ -43,7 +43,7 @@
     let statusMessage = $state('');
     let errorMessage = $state('');
 
-    const radioApiUrl = $derived((env.PUBLIC_RADIO_API_URL || '').replace(/\/$/, ''));
+    const radioApiUrl = $derived((env.PUBLIC_RADIO_API_URL || '').trim().replace(/\/$/, ''));
 
     function clearMessages() {
         statusMessage = '';
@@ -57,7 +57,7 @@
 
     async function getToken() {
         const session = await supabase.auth.getSession();
-        const token = session.data.session?.access_token;
+        const token = session.data.session?.access_token?.trim().replace(/[^\x21-\x7e]/g, '');
         if (!token) throw new Error('Sessao expirada. Entre novamente no admin.');
         return token;
     }
@@ -68,12 +68,12 @@
         }
 
         const token = await getToken();
+        const headers = new Headers(init.headers);
+        headers.set('Authorization', `Bearer ${token}`);
+
         const response = await fetch(`${radioApiUrl}${path}`, {
             ...init,
-            headers: {
-                Authorization: `Bearer ${token}`,
-                ...(init.headers || {})
-            }
+            headers
         });
 
         if (!response.ok) {
