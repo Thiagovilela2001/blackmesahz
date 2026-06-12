@@ -57,7 +57,7 @@
 
     async function getToken() {
         const session = await supabase.auth.getSession();
-        const token = session.data.session?.access_token?.trim().replace(/[^\x21-\x7e]/g, '');
+        const token = session.data.session?.access_token?.trim().replace(/[^A-Za-z0-9._-]/g, '');
         if (!token) throw new Error('Sessao expirada. Entre novamente no admin.');
         return token;
     }
@@ -68,11 +68,12 @@
         }
 
         const token = await getToken();
-        const headers = new Headers(init.headers);
+        const headers = new Headers();
         headers.set('Authorization', `Bearer ${token}`);
 
         const response = await fetch(`${radioApiUrl}${path}`, {
-            ...init,
+            method: init.method || 'GET',
+            body: init.body,
             headers
         });
 
