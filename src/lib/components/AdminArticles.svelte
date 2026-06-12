@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
+    import { env } from '$env/dynamic/public';
     import { supabase } from '$lib/supabase';
     import { safeImageUrl } from '$lib/security';
     import { markdownToSafeHtml, type ArticleRow } from '$lib/articles';
@@ -45,6 +46,9 @@
     };
 
     const AUTOSAVE_KEY = 'blackmesa_admin_article_draft';
+    const ADMIN_LOGIN = 'admin';
+    const ADMIN_PASSWORD = 'blackmesa2026';
+    const adminSupabaseEmail = env.PUBLIC_ADMIN_EMAIL || 'admin@blackmesa.local';
 
     let user = $state<User | null>(null);
     let email = $state('');
@@ -201,7 +205,11 @@
         isLoading = true;
 
         try {
-            const result = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+            const loginEmail =
+                email.trim().toLowerCase() === ADMIN_LOGIN && password === ADMIN_PASSWORD
+                    ? adminSupabaseEmail
+                    : email.trim();
+            const result = await supabase.auth.signInWithPassword({ email: loginEmail, password });
 
             if (result.error) {
                 errorMessage = result.error.message;
@@ -209,7 +217,7 @@
             }
 
             user = result.data.user;
-            await loadArticles();
+            if (activeAdminTab === 'articles') await loadArticles();
         } catch (error) {
             errorMessage = error instanceof Error ? error.message : 'Erro ao tentar fazer login.';
         } finally {
@@ -374,8 +382,23 @@
             </div>
             {#if user}
                 <div class="head-actions">
-                    <button type="button" class:active={activeAdminTab === 'articles'} class="ghost-btn" onclick={() => activeAdminTab = 'articles'}>Artigos</button>
-                    <button type="button" class:active={activeAdminTab === 'radio'} class="ghost-btn" onclick={() => activeAdminTab = 'radio'}>Radio</button>
+                    <button
+                        type="button"
+                        class:active={activeAdminTab === 'articles'}
+                        class="ghost-btn"
+                        onclick={async () => {
+                            activeAdminTab = 'articles';
+                            clearMessages();
+                            if (!articles.length) await loadArticles();
+                        }}>Artigos</button>
+                    <button
+                        type="button"
+                        class:active={activeAdminTab === 'radio'}
+                        class="ghost-btn"
+                        onclick={() => {
+                            activeAdminTab = 'radio';
+                            clearMessages();
+                        }}>Radio</button>
                     <button type="button" class="ghost-btn" onclick={resetForm}>Novo</button>
                     <button type="button" class="ghost-btn" onclick={logout}>Sair</button>
                 </div>
