@@ -1,17 +1,38 @@
 # BLACKMESA Hz audio folder
 
-Put one or more `.mp3` files in this folder.
+Put the radio audio files in this folder.
 
-Then run:
+These files can be used in two ways:
 
-```powershell
-python radio_server.py
-```
+- As fallback/on-demand files in the website.
+- As the Liquidsoap playlist that keeps the Icecast stream running when no live input is connected.
 
-The stream URL will be:
+The first configured track expects this file:
 
 ```text
-http://localhost:8000/stream.mp3
+static/radio/audio/aperta-o-da-forte.mp3
 ```
 
-The site is already configured to use that URL in `script.js`.
+It will be served by the site at:
+
+```text
+/radio/audio/aperta-o-da-forte.mp3
+```
+
+To add more authorial tracks, add the `.mp3` files here and register them in:
+
+```text
+src/lib/data/radio.ts
+```
+
+If the file should also play in the Icecast stream fallback playlist, add its container path to:
+
+```text
+radio/liquidsoap/playlist.m3u
+```
+
+Example:
+
+```text
+/audio/aperta-o-da-forte.mp3
+```

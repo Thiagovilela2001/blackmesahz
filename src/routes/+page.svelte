@@ -146,6 +146,10 @@
         return safeImageUrl(path);
     }
 
+    function shouldLoadCardImage(i: number) {
+        return $expandedCardIndex === i || Math.abs(i - $currentIndex) <= 3;
+    }
+
     function mobileItemActionLabel(index: number) {
         if ($currentTab === "playlists") return "Ler artigo";
         if ($expandedCardIndex === index) return "Fechar release";
@@ -522,7 +526,7 @@
             >
                 <div
                     class="card-img-overlay"
-                    style="background-image: url('{data.image}')"
+                    style={shouldLoadCardImage(i) ? `background-image: url('${imageUrl(data.image)}')` : ""}
                 ></div>
                 <div
                     class="card-text-content"
@@ -603,7 +607,9 @@
 
 <!-- G-Man Observer -->
 <div class="gman-observer" class:visible={gmanVisible} aria-hidden="true">
-    <img src="/gman-2-nobg.gif" alt="" />
+    {#if gmanVisible}
+        <img src="/gman-2-nobg.gif" alt="" loading="lazy" decoding="async" />
+    {/if}
 </div>
 
 <style>

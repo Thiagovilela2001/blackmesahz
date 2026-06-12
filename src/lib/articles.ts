@@ -18,6 +18,8 @@ export type ArticleRow = {
     credits?: string[] | null;
     gallery?: Array<{ src: string; alt: string }> | null;
     published?: boolean | null;
+    publish_at?: string | null;
+    published_at?: string | null;
     created_at?: string | null;
 };
 

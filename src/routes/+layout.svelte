@@ -32,7 +32,6 @@
 <LoadingScreen />
 
 <Header />
-
 {#key $page.url.pathname}
     <div in:fade={{ duration: 300, delay: 300 }} out:fade={{ duration: 300 }} style="display: contents;">
         {@render children()}

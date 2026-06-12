@@ -1,45 +1,53 @@
 <script lang="ts">
-    import { radioData } from '$lib/data/radio';
+    import { onMount } from 'svelte';
+    import { radioData as fallbackRadioData, type RadioData } from '$lib/data/radio';
     import { blackmesaHzPlaylist } from '$lib/data/blackmesaHz';
-    import { isPlaying, toggleRadio, radioStatus } from '$lib/stores/radio';
+    import {
+        currentTrackIndex,
+        activeRadioSource,
+        isPlaying,
+        nowPlaying,
+        playLiveStream,
+        playNextTrack,
+        playPreviousTrack,
+        playTrack,
+        radioStatus,
+        radioTracks,
+        setRadioCatalog,
+        setAudioElement,
+        toggleRadio
+    } from '$lib/stores/radio';
+    import LazyEmbed from '$lib/components/LazyEmbed.svelte';
+
+    let { radioData = fallbackRadioData }: { radioData?: RadioData } = $props();
 
     const barsCount = 28;
 
+    let audioElement: HTMLAudioElement;
     let expandedProgramIndex = $state<number | null>(null);
 
+    let currentArtwork = $derived($nowPlaying.artwork_url || blackmesaHzPlaylist.coverUrl);
+
     function toggleDetails(index: number) {
-        if (expandedProgramIndex === index) {
-            expandedProgramIndex = null;
-        } else {
-            expandedProgramIndex = index;
-        }
+        expandedProgramIndex = expandedProgramIndex === index ? null : index;
     }
+
+    onMount(() => {
+        setRadioCatalog(radioData);
+        setAudioElement(audioElement);
+    });
 </script>
 
 <div id="radio-wrapper" style="display: block">
+    <audio bind:this={audioElement}></audio>
+
     <div
         class="radio-ambient-bg"
-        style="background-image: url('{blackmesaHzPlaylist.coverUrl}')"
+        style="background-image: url('{currentArtwork}')"
         aria-hidden="true"
     ></div>
-    <div class="radio-shell">
-        <!-- Spotify Playlist -->
-        <section class="radio-spotify-section">
-            <div class="spotify-embed-wrapper">
-                <iframe
-                    title={blackmesaHzPlaylist.title}
-                    src={blackmesaHzPlaylist.embedUrl}
-                    width="100%"
-                    height="100%"
-                    frameborder="0"
-                    allowfullscreen
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                    loading="lazy"
-                ></iframe>
-            </div>
-        </section>
 
-        <!-- Hero -->
+    <div class="radio-shell">
         <section class="radio-hero">
             <div class="radio-topline">
                 <span class="radio-live-pill">
@@ -59,40 +67,63 @@
                     class="radio-play-button"
                     class:is-playing={$isPlaying}
                     onclick={toggleRadio}
-                    aria-label={$isPlaying ? 'Pausar rádio' : 'Tocar rádio ao vivo'}
+                    aria-label={$isPlaying ? 'Pausar rádio autoral' : 'Tocar rádio autoral'}
                 >
                     <i class={$isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play'}></i>
                 </button>
+
                 <div class="radio-player-info">
                     <span class="radio-player-label">{radioData.station}</span>
-                    <strong>{radioData.currentShow.host}</strong>
-                    <span class="radio-status">{$radioStatus}</span>
+                    <strong>{$nowPlaying.track || radioData.currentShow.host}</strong>
+                    <span class="radio-status">
+                        {$nowPlaying.artist ? `${$nowPlaying.artist} / ` : ''}{$radioStatus}
+                    </span>
                     <div class="radio-waveform" class:is-playing={$isPlaying} aria-hidden="true">
                         {#each Array(barsCount) as _}
                             <span></span>
                         {/each}
                     </div>
+                    <div class="radio-transport">
+                        <button type="button" onclick={playPreviousTrack} aria-label="Faixa anterior">
+                            <i class="fa-solid fa-backward-step"></i>
+                        </button>
+                        <button type="button" onclick={playNextTrack} aria-label="Próxima faixa">
+                            <i class="fa-solid fa-forward-step"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- Side Panel -->
         <aside class="radio-side-panel">
             <div class="radio-side-header">
-                <span>Próximos</span>
-                <span>Hoje</span>
+                <span>No ar</span>
+                <span>Icecast</span>
             </div>
-            <div class="radio-next-list">
-                {#each radioData.next as item}
-                    <div class="radio-next-item">
-                        <span class="radio-next-time">{item.time}</span>
-                        <div class="radio-next-info">
-                            <strong>{item.title}</strong>
-                            <span>{item.subtitle}</span>
-                        </div>
-                    </div>
+
+            <div class="radio-tracklist">
+                <button
+                    type="button"
+                    class:active={$activeRadioSource === 'live'}
+                    onclick={playLiveStream}
+                >
+                    <span>LIVE</span>
+                    <strong>{radioData.liveTrack.title}</strong>
+                    <small>{radioData.liveTrack.artist}</small>
+                </button>
+                {#each $radioTracks as track, index}
+                    <button
+                        type="button"
+                        class:active={$activeRadioSource === 'archive' && index === $currentTrackIndex}
+                        onclick={() => playTrack(index)}
+                    >
+                        <span>{String(index + 1).padStart(2, '0')}</span>
+                        <strong>{track.title}</strong>
+                        <small>{track.artist}</small>
+                    </button>
                 {/each}
             </div>
+
             <div class="radio-tags">
                 {#each radioData.tags as tag}
                     <span class="radio-tag">{tag}</span>
@@ -100,7 +131,6 @@
             </div>
         </aside>
 
-        <!-- Programas -->
         <section id="radio-programas" class="radio-section">
             <div class="radio-section-header">
                 <span>Programas</span>
@@ -140,7 +170,6 @@
             </div>
         </section>
 
-        <!-- Schedule -->
         <section class="radio-section">
             <div class="radio-section-header">
                 <span>Schedule</span>
@@ -159,6 +188,22 @@
                         </div>
                     {/each}
                 {/each}
+            </div>
+        </section>
+
+        <section class="radio-spotify-section">
+            <div class="radio-section-header">
+                <span>Recomendações</span>
+                <span>Spotify</span>
+            </div>
+            <div class="spotify-embed-wrapper">
+                <LazyEmbed
+                    title={blackmesaHzPlaylist.title}
+                    src={blackmesaHzPlaylist.embedUrl}
+                    externalUrl={blackmesaHzPlaylist.externalUrl}
+                    actionLabel="Carregar playlist"
+                    openLabel="Abrir Spotify"
+                />
             </div>
         </section>
     </div>
@@ -181,38 +226,94 @@
         z-index: 1;
     }
 
+    .radio-transport {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .radio-transport button {
+        width: 34px;
+        height: 30px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line-color);
+        border-radius: var(--border-radius);
+        background: rgba(255, 255, 255, 0.035);
+        color: #ffffff;
+        cursor: pointer;
+    }
+
+    .radio-transport button:hover,
+    .radio-transport button:focus-visible {
+        border-color: var(--accent-color);
+        color: var(--accent-color);
+    }
+
+    .radio-tracklist {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .radio-tracklist button {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr);
+        gap: 3px 10px;
+        border: 0;
+        border-bottom: 1px solid var(--line-color);
+        padding: 14px 16px;
+        background: transparent;
+        color: #ffffff;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .radio-tracklist button:hover,
+    .radio-tracklist button.active {
+        background: rgba(119, 147, 131, 0.08);
+    }
+
+    .radio-tracklist span {
+        grid-row: span 2;
+        color: var(--accent-color);
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .radio-tracklist strong,
+    .radio-tracklist small {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .radio-tracklist strong {
+        font-size: 13px;
+        text-transform: uppercase;
+    }
+
+    .radio-tracklist small {
+        color: var(--muted-color);
+        font-size: 11px;
+    }
+
     .radio-spotify-section {
         grid-column: 1 / -1;
-        padding: 0 8px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        background-color: var(--surface-color);
+        box-shadow:
+            0 0 0 1px rgba(119, 147, 131, 0.04),
+            0 24px 64px rgba(0, 0, 0, 0.5);
     }
 
     .spotify-embed-wrapper {
-        border-radius: 20px;
         overflow: hidden;
-        height: calc(100vh - 195px);
-        height: calc(100dvh - 195px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow:
-            0 0 0 1px rgba(119, 147, 131, 0.06),
-            0 32px 80px rgba(0, 0, 0, 0.6);
-    }
-
-    .spotify-embed-wrapper iframe {
-        display: block;
-        width: 100%;
-        height: 100%;
-    }
-
-    @media (max-width: 720px) {
-        .radio-spotify-section {
-            padding: 0;
-        }
-
-        .spotify-embed-wrapper {
-            height: calc(100vh - 170px);
-            height: calc(100dvh - 170px);
-            border-radius: 14px;
-        }
+        height: 430px;
+        border-top: 1px solid var(--line-color);
     }
 
     .radio-shows-stack {
@@ -329,6 +430,10 @@
 
         .details-btn {
             width: 100%;
+        }
+
+        .spotify-embed-wrapper {
+            height: 360px;
         }
     }
 </style>

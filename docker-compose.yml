@@ -1,0 +1,20 @@
+services:
+  icecast:
+    build:
+      context: ./radio/icecast
+    container_name: blackmesa-icecast
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  liquidsoap:
+    build:
+      context: ./radio/liquidsoap
+    container_name: blackmesa-liquidsoap
+    depends_on:
+      - icecast
+    ports:
+      - "9001:9001"
+    volumes:
+      - ./static/radio/audio:/audio:ro
+    restart: unless-stopped

@@ -98,6 +98,41 @@ function safeFrameUrl(urlValue?: string | null) {
     }
 }
 
+function escapeHtml(value: string) {
+    return value.replace(/[&<>"']/g, char => {
+        if (char === '&') return '&amp;';
+        if (char === '<') return '&lt;';
+        if (char === '>') return '&gt;';
+        if (char === '"') return '&quot;';
+        return '&#39;';
+    });
+}
+
+function sanitizeTrustedHtmlString(html: string) {
+    const iframeMatch = html.match(/<iframe\b[^>]*\bsrc=(["'])(.*?)\1[^>]*><\/iframe>/i);
+    const cleanParts: string[] = [];
+
+    if (iframeMatch) {
+        const src = safeFrameUrl(iframeMatch[2]);
+        if (src) {
+            cleanParts.push(
+                `<iframe src="${escapeHtml(src)}" title="Player externo" width="100%" height="300" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; clipboard-write"></iframe>`
+            );
+        }
+    }
+
+    const withoutIframes = html.replace(/<iframe\b[\s\S]*?<\/iframe>/gi, '');
+    const withBreakTokens = withoutIframes.replace(/<br\s*\/?>/gi, '___SAFE_BR___');
+    const textOnly = withBreakTokens.replace(/<[^>]*>/g, '');
+    const cleanText = escapeHtml(textOnly).replace(/___SAFE_BR___/g, '<br>');
+
+    if (cleanText.trim()) {
+        cleanParts.push(cleanText);
+    }
+
+    return cleanParts.join('');
+}
+
 function appendSanitizedNode(source: Node, target: Node, documentRef: Document) {
     if (source.nodeType === Node.TEXT_NODE) {
         target.appendChild(documentRef.createTextNode(source.textContent || ''));
@@ -179,7 +214,10 @@ function appendSanitizedNode(source: Node, target: Node, documentRef: Document) 
 }
 
 export function sanitizeTrustedHtml(html?: string | null) {
-    if (!html || typeof DOMParser === 'undefined' || typeof document === 'undefined') return '';
+    if (!html) return '';
+    if (typeof DOMParser === 'undefined' || typeof document === 'undefined') {
+        return sanitizeTrustedHtmlString(html);
+    }
 
     const parser = new DOMParser();
     const parsed = parser.parseFromString(html, 'text/html');

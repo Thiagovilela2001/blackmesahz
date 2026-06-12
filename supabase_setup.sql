@@ -102,17 +102,140 @@ CREATE TABLE articles (
     credits TEXT[] DEFAULT ARRAY[]::TEXT[] NOT NULL,
     gallery JSONB DEFAULT '[]'::jsonb NOT NULL,
     published BOOLEAN DEFAULT false NOT NULL,
+    publish_at TIMESTAMP WITH TIME ZONE,
+    published_at TIMESTAMP WITH TIME ZONE,
+    webhook_sent_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-CREATE INDEX articles_published_created_at_idx ON articles (published, created_at DESC);
+CREATE INDEX IF NOT EXISTS articles_published_created_at_idx ON articles (published, publish_at, created_at DESC);
+
+ALTER TABLE articles ADD COLUMN IF NOT EXISTS publish_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE articles ADD COLUMN IF NOT EXISTS published_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE articles ADD COLUMN IF NOT EXISTS webhook_sent_at TIMESTAMP WITH TIME ZONE;
+
+CREATE TABLE IF NOT EXISTS article_webhook_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    article_id UUID REFERENCES articles(id) ON DELETE CASCADE,
+    event_type TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    delivered_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE article_webhook_events ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow admins read webhook events" ON article_webhook_events;
+CREATE POLICY "Allow admins read webhook events" ON article_webhook_events
+FOR SELECT
+USING (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+);
+
+CREATE OR REPLACE FUNCTION set_article_published_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.published = true AND (TG_OP = 'INSERT' OR OLD.published IS DISTINCT FROM true) THEN
+        NEW.published_at = timezone('utc'::text, now());
+    END IF;
+
+    IF NEW.published = false THEN
+        NEW.published_at = NULL;
+        NEW.webhook_sent_at = NULL;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS set_article_published_at_trigger ON articles;
+CREATE TRIGGER set_article_published_at_trigger
+BEFORE INSERT OR UPDATE ON articles
+FOR EACH ROW
+EXECUTE FUNCTION set_article_published_at();
+
+CREATE OR REPLACE FUNCTION queue_article_publish_webhook()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.published = true
+        AND (NEW.publish_at IS NULL OR NEW.publish_at <= timezone('utc'::text, now()))
+        AND (
+            TG_OP = 'INSERT'
+            OR OLD.published IS DISTINCT FROM true
+            OR OLD.publish_at IS DISTINCT FROM NEW.publish_at
+        )
+    THEN
+        INSERT INTO article_webhook_events (article_id, event_type, payload)
+        VALUES (
+            NEW.id,
+            'article.published',
+            jsonb_build_object(
+                'id', NEW.id,
+                'slug', NEW.slug,
+                'title', NEW.title,
+                'url', '/playlists/' || NEW.slug,
+                'published_at', NEW.published_at,
+                'publish_at', NEW.publish_at
+            )
+        );
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS queue_article_publish_webhook_trigger ON articles;
+CREATE TRIGGER queue_article_publish_webhook_trigger
+AFTER INSERT OR UPDATE ON articles
+FOR EACH ROW
+EXECUTE FUNCTION queue_article_publish_webhook();
+
+CREATE OR REPLACE FUNCTION queue_due_article_publish_webhooks()
+RETURNS INTEGER AS $$
+DECLARE
+    queued_count INTEGER;
+BEGIN
+    INSERT INTO article_webhook_events (article_id, event_type, payload)
+    SELECT
+        articles.id,
+        'article.published',
+        jsonb_build_object(
+            'id', articles.id,
+            'slug', articles.slug,
+            'title', articles.title,
+            'url', '/playlists/' || articles.slug,
+            'published_at', articles.published_at,
+            'publish_at', articles.publish_at
+        )
+    FROM articles
+    WHERE articles.published = true
+        AND articles.publish_at IS NOT NULL
+        AND articles.publish_at <= timezone('utc'::text, now())
+        AND NOT EXISTS (
+            SELECT 1
+            FROM article_webhook_events
+            WHERE article_webhook_events.article_id = articles.id
+                AND article_webhook_events.event_type = 'article.published'
+        );
+
+    GET DIAGNOSTICS queued_count = ROW_COUNT;
+    RETURN queued_count;
+END;
+$$ LANGUAGE plpgsql;
 
 ALTER TABLE articles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow public read access to published articles" ON articles;
 CREATE POLICY "Allow public read access to published articles" ON articles
 FOR SELECT
-USING (published = true);
+USING (
+    published = true
+    AND (publish_at IS NULL OR publish_at <= timezone('utc'::text, now()))
+);
 
 CREATE POLICY "Allow admins read access to all articles" ON articles
 FOR SELECT
@@ -141,6 +264,16 @@ USING (
     )
 )
 WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+);
+
+DROP POLICY IF EXISTS "Allow admins delete articles" ON articles;
+CREATE POLICY "Allow admins delete articles" ON articles
+FOR DELETE
+USING (
     EXISTS (
         SELECT 1 FROM article_admins
         WHERE email = (auth.jwt() ->> 'email')
@@ -186,3 +319,258 @@ WITH CHECK (
 
 -- After creating your Supabase Auth user, add your email:
 -- INSERT INTO article_admins (email) VALUES ('voce@seudominio.com');
+
+
+-- BLACKMESA Hz radio catalog
+CREATE TABLE IF NOT EXISTS radio_settings (
+    id TEXT PRIMARY KEY DEFAULT 'main' CHECK (id = 'main'),
+    station TEXT DEFAULT 'BLACKMESA Hz' NOT NULL,
+    location TEXT DEFAULT 'Sao Paulo / Online' NOT NULL,
+    stream_url TEXT NOT NULL,
+    mode TEXT DEFAULT 'live' NOT NULL CHECK (mode IN ('live', 'archive')),
+    live_label TEXT DEFAULT 'ON AIR:' NOT NULL,
+    current_series TEXT DEFAULT 'Icecast / Liquidsoap' NOT NULL,
+    current_title TEXT DEFAULT 'BLACKMESA Hz' NOT NULL,
+    current_description TEXT DEFAULT '' NOT NULL,
+    current_host TEXT DEFAULT 'BLACKMESA residents' NOT NULL,
+    live_artist TEXT DEFAULT 'Icecast / Liquidsoap' NOT NULL,
+    live_artwork TEXT,
+    tags TEXT[] DEFAULT ARRAY[]::TEXT[] NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+INSERT INTO radio_settings (
+    id,
+    station,
+    location,
+    stream_url,
+    mode,
+    live_label,
+    current_series,
+    current_title,
+    current_description,
+    current_host,
+    live_artist,
+    live_artwork,
+    tags
+) VALUES (
+    'main',
+    'BLACKMESA Hz',
+    'Sao Paulo / Online',
+    'http://127.0.0.1:8000/blackmesa.mp3',
+    'live',
+    'ON AIR:',
+    'Icecast / Liquidsoap',
+    'BLACKMESA Hz',
+    'Transmissao ao vivo e programacao autoral via Icecast + Liquidsoap, com fallback para arquivos gravados quando nao houver entrada live.',
+    'BLACKMESA residents',
+    'Icecast / Liquidsoap',
+    '/capa_quinzenal.png',
+    ARRAY['Ao vivo', 'Autoral', 'Icecast', 'Liquidsoap', 'UK Bass', 'Dubstep', 'Garage', 'Sao Paulo']
+) ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS radio_tracks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title TEXT NOT NULL,
+    artist TEXT NOT NULL,
+    src TEXT NOT NULL,
+    artwork TEXT,
+    genre TEXT,
+    release TEXT,
+    sort_order INTEGER DEFAULT 0 NOT NULL,
+    published BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS radio_tracks_published_sort_order_idx ON radio_tracks (published, sort_order);
+CREATE UNIQUE INDEX IF NOT EXISTS radio_tracks_src_idx ON radio_tracks (src);
+
+INSERT INTO radio_tracks (title, artist, src, artwork, genre, release, sort_order, published)
+VALUES (
+    'Aperta o da Forte',
+    'BLACKMESA',
+    '/radio/audio/aperta-o-da-forte.mp3',
+    '/capa_quinzenal.png',
+    'Autoral',
+    'BLACKMESA Hz',
+    10,
+    true
+) ON CONFLICT DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS radio_shows (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title TEXT NOT NULL,
+    description TEXT DEFAULT '' NOT NULL,
+    host TEXT,
+    genre TEXT,
+    image TEXT,
+    date_label TEXT DEFAULT 'Em breve' NOT NULL,
+    time_slot TEXT,
+    sort_order INTEGER DEFAULT 0 NOT NULL,
+    published BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS radio_shows_published_sort_order_idx ON radio_shows (published, sort_order);
+CREATE UNIQUE INDEX IF NOT EXISTS radio_shows_title_idx ON radio_shows (title);
+
+INSERT INTO radio_shows (title, description, host, genre, image, date_label, time_slot, sort_order, published)
+VALUES
+(
+    'SNOT - CONCRETICIDADE',
+    'A primeira edicao da serie BLACKMESA Hz vira transmissao comentada, atravessando peso, textura e dubstep.',
+    'SNOT',
+    'Dubstep',
+    'https://placehold.co/128x128/3f4738/eff6ee?text=SNOT',
+    '29 Jun 2026',
+    '20:00 - 22:00',
+    10,
+    true
+),
+(
+    'LABS TRANSMISSION',
+    'Sets registrados no laboratorio BLACKMESA, com convidados e recortes do circuito bass brasileiro.',
+    'BM Residents',
+    'UK Bass / Grime',
+    'https://placehold.co/128x128/3f4738/eff6ee?text=LABS',
+    'Em breve',
+    '18:00 - 20:00',
+    20,
+    true
+),
+(
+    'BOOTLEGS I RADIO',
+    'Escuta expandida do catalogo BM001 com notas, versoes e contexto de producao.',
+    'Black Mesa',
+    'Bootlegs / Garage',
+    'https://placehold.co/128x128/3f4738/eff6ee?text=BOOTS',
+    'Arquivo',
+    '22:00 - 00:00',
+    30,
+    true
+) ON CONFLICT DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS radio_schedule (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    time_label TEXT NOT NULL,
+    monday TEXT,
+    tuesday TEXT,
+    wednesday TEXT,
+    thursday TEXT,
+    friday TEXT,
+    saturday TEXT,
+    sunday TEXT,
+    sort_order INTEGER DEFAULT 0 NOT NULL,
+    published BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS radio_schedule_published_sort_order_idx ON radio_schedule (published, sort_order);
+CREATE UNIQUE INDEX IF NOT EXISTS radio_schedule_time_label_idx ON radio_schedule (time_label);
+
+INSERT INTO radio_schedule (
+    time_label,
+    monday,
+    tuesday,
+    wednesday,
+    thursday,
+    friday,
+    saturday,
+    sunday,
+    sort_order,
+    published
+) VALUES
+('18', '', '', 'Rec: Hz', '', 'Warmup', 'Arquivo', '', 10, true),
+('20', 'Labs', '', 'Concreticidade', '', 'Residents', 'Guest Mix', 'Sunday Bass', 20, true),
+('22', 'Rec: BM001', 'Garage Notes', '', 'Grime Files', 'Club Pressure', 'Live Room', '', 30, true),
+('00', '', 'After Hours', '', 'Dub Pressure', 'After Hours', 'After Hours', 'Rec: Labs', 40, true)
+ON CONFLICT DO NOTHING;
+
+ALTER TABLE radio_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE radio_tracks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE radio_shows ENABLE ROW LEVEL SECURITY;
+ALTER TABLE radio_schedule ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read access to radio settings" ON radio_settings;
+CREATE POLICY "Allow public read access to radio settings" ON radio_settings
+FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Allow public read access to published radio tracks" ON radio_tracks;
+CREATE POLICY "Allow public read access to published radio tracks" ON radio_tracks
+FOR SELECT USING (published = true);
+
+DROP POLICY IF EXISTS "Allow public read access to published radio shows" ON radio_shows;
+CREATE POLICY "Allow public read access to published radio shows" ON radio_shows
+FOR SELECT USING (published = true);
+
+DROP POLICY IF EXISTS "Allow public read access to published radio schedule" ON radio_schedule;
+CREATE POLICY "Allow public read access to published radio schedule" ON radio_schedule
+FOR SELECT USING (published = true);
+
+DROP POLICY IF EXISTS "Allow admins manage radio settings" ON radio_settings;
+CREATE POLICY "Allow admins manage radio settings" ON radio_settings
+FOR ALL
+USING (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+);
+
+DROP POLICY IF EXISTS "Allow admins manage radio tracks" ON radio_tracks;
+CREATE POLICY "Allow admins manage radio tracks" ON radio_tracks
+FOR ALL
+USING (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+);
+
+DROP POLICY IF EXISTS "Allow admins manage radio shows" ON radio_shows;
+CREATE POLICY "Allow admins manage radio shows" ON radio_shows
+FOR ALL
+USING (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+);
+
+DROP POLICY IF EXISTS "Allow admins manage radio schedule" ON radio_schedule;
+CREATE POLICY "Allow admins manage radio schedule" ON radio_schedule
+FOR ALL
+USING (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM article_admins
+        WHERE email = (auth.jwt() ->> 'email')
+    )
+);

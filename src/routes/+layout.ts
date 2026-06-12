@@ -1,4 +1,3 @@
-import { supabase } from '$lib/supabase';
 import { eventsData as fallbackEventsData } from '$lib/data/events';
 import { playlistCardsData } from '$lib/data/playlists';
 import { releasesData as fallbackReleasesData } from '$lib/data/releases';
@@ -6,10 +5,10 @@ import { articleRowToCard, type ArticleRow } from '$lib/articles';
 import { safeExternalUrl, safeImageUrl, sanitizeTrustedHtml } from '$lib/security';
 import type { LayoutLoad } from './$types';
 
-export const ssr = false;
+export const ssr = true;
 export const prerender = false;
 
-const SUPABASE_TIMEOUT_MS = 1800;
+const SUPABASE_TIMEOUT_MS = 650;
 
 type ReleaseLike = {
     catalog: string;
@@ -58,7 +57,30 @@ function withTimeout<T>(promise: PromiseLike<T>, ms = SUPABASE_TIMEOUT_MS): Prom
     });
 }
 
+async function fetchPublishedArticles(supabase: Awaited<ReturnType<typeof importSupabase>>['supabase']) {
+    const scheduledResult = await supabase
+        .from('articles')
+        .select('slug,title,subtitle,issue,category,genre,hero_image,published,publish_at,created_at')
+        .eq('published', true)
+        .or(`publish_at.is.null,publish_at.lte.${new Date().toISOString()}`)
+        .order('created_at', { ascending: false });
+
+    if (!scheduledResult.error) return scheduledResult;
+
+    return supabase
+        .from('articles')
+        .select('slug,title,subtitle,issue,category,genre,hero_image,published,created_at')
+        .eq('published', true)
+        .order('created_at', { ascending: false });
+}
+
+async function importSupabase() {
+    return import('$lib/supabase');
+}
+
 export const load: LayoutLoad = async () => {
+    const { supabase } = await importSupabase();
+
     const [releasesResult, eventsResult, articlesResult] = await Promise.allSettled([
         withTimeout(
             supabase
@@ -72,13 +94,7 @@ export const load: LayoutLoad = async () => {
                 .select('*')
                 .order('created_at', { ascending: true })
         ),
-        withTimeout(
-            supabase
-                .from('articles')
-                .select('slug,title,subtitle,issue,category,genre,hero_image,published,created_at')
-                .eq('published', true)
-                .order('created_at', { ascending: false })
-        )
+        withTimeout(fetchPublishedArticles(supabase))
     ]);
 
     const releases =

@@ -1,0 +1,56 @@
+<icecast>
+    <location>Sao Paulo</location>
+    <admin>admin@blackmesa.local</admin>
+
+    <limits>
+        <clients>100</clients>
+        <sources>4</sources>
+        <queue-size>524288</queue-size>
+        <client-timeout>30</client-timeout>
+        <header-timeout>15</header-timeout>
+        <source-timeout>10</source-timeout>
+        <burst-on-connect>1</burst-on-connect>
+        <burst-size>65535</burst-size>
+    </limits>
+
+    <authentication>
+        <source-password>blackmesa_source</source-password>
+        <relay-password>blackmesa_relay</relay-password>
+        <admin-user>admin</admin-user>
+        <admin-password>blackmesa_admin</admin-password>
+    </authentication>
+
+    <hostname>localhost</hostname>
+
+    <listen-socket>
+        <port>8000</port>
+    </listen-socket>
+
+    <mount>
+        <mount-name>/blackmesa.mp3</mount-name>
+        <stream-name>BLACKMESA Hz</stream-name>
+        <stream-description>BLACKMESA Hz live stream</stream-description>
+        <stream-genre>UK Bass</stream-genre>
+        <public>1</public>
+    </mount>
+
+    <fileserve>1</fileserve>
+
+    <paths>
+        <basedir>/usr/share/icecast2</basedir>
+        <logdir>/var/log/icecast2</logdir>
+        <webroot>/usr/share/icecast2/web</webroot>
+        <adminroot>/usr/share/icecast2/admin</adminroot>
+        <alias source="/" destination="/status.xsl" />
+    </paths>
+
+    <logging>
+        <accesslog>-</accesslog>
+        <errorlog>-</errorlog>
+        <loglevel>3</loglevel>
+    </logging>
+
+    <security>
+        <chroot>0</chroot>
+    </security>
+</icecast>

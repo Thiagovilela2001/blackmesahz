@@ -32,6 +32,7 @@
         { id: 'home', label: 'Início' },
         { id: 'releases', label: 'Releases' },
         { id: 'playlists', label: 'Artigos' },
+        { id: 'radio', label: 'Rádio' },
         { id: 'events', label: 'Eventos' }
     ];
 </script>

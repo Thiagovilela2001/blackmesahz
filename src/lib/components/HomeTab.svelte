@@ -4,6 +4,7 @@
     import { currentTab, isInstitutionalVisible, siteLanguage } from '$lib/stores/navigation';
     import { blackmesaHzPlaylist } from '$lib/data/blackmesaHz';
     import { safeExternalUrl, safeImageUrl } from '$lib/security';
+    import LazyEmbed from '$lib/components/LazyEmbed.svelte';
 
     type FeatureSlide = {
         topicPt: string;
@@ -237,7 +238,7 @@
     >
         {#if activeFeature}
             <div class="feature-media">
-                <img src={imageUrl(activeFeature.image)} alt={activeFeature.title} />
+                <img src={imageUrl(activeFeature.image)} alt={activeFeature.title} decoding="async" fetchpriority="high" />
                 <div class="feature-index">
                     {String(activeFeatureIndex + 1).padStart(2, '0')} / {String(featureSlides.length).padStart(2, '0')}
                 </div>
@@ -314,16 +315,11 @@
                 </div>
             </div>
             <div class="home-spotify-embed">
-                <iframe
+                <LazyEmbed
                     title={blackmesaHzPlaylist.title}
                     src={blackmesaHzPlaylist.embedUrl}
-                    width="100%"
-                    height="100%"
-                    frameborder="0"
-                    allowfullscreen
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                    loading="lazy"
-                ></iframe>
+                    externalUrl={blackmesaHzPlaylist.externalUrl}
+                />
             </div>
             <div class="hz-meta-grid">
                 <div>
@@ -798,15 +794,6 @@
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 12px;
         background: #050505;
-    }
-
-    .home-spotify-embed iframe {
-        position: absolute;
-        inset: 0;
-        display: block;
-        width: 100%;
-        height: 100%;
-        border: 0;
     }
 
     .hz-meta-grid {

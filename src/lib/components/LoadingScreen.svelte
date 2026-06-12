@@ -14,6 +14,7 @@
             if (lang === 'pt-br' || lang === 'en') {
                 siteLanguage.set(lang);
                 isLanguageSelected = true;
+                isLoading = false;
             }
         }
     });
@@ -43,7 +44,7 @@
 
 {#if isLoading}
     <div id="loading-screen">
-        <img class="gman-bg" src="/gman-2-nobg.gif" alt="" aria-hidden="true" />
+        <div class="loading-mark" aria-hidden="true">BLACKMESA</div>
         <div class="loading-content">
             {#if !isLanguageSelected}
                 <div class="flags-container">
@@ -141,24 +142,27 @@
         letter-spacing: 2px;
     }
 
-    .gman-bg {
+    .loading-mark {
         position: absolute;
-        right: 5%;
-        bottom: 0;
-        height: 75vh;
-        width: auto;
-        opacity: 0.08;
-        filter: grayscale(1) brightness(1.5) contrast(1.8);
+        right: 4vw;
+        bottom: 3vh;
+        max-width: 86vw;
+        opacity: 0.05;
+        color: #ffffff;
+        font-size: clamp(48px, 13vw, 190px);
+        font-weight: 800;
+        line-height: 0.8;
+        letter-spacing: 0;
         pointer-events: none;
-        object-fit: contain;
+        text-transform: uppercase;
     }
 
     @media (max-width: 768px) {
-        .gman-bg {
+        .loading-mark {
             right: 50%;
+            bottom: 8vh;
             transform: translateX(50%);
-            opacity: 0.05;
-            height: 45vh;
+            font-size: clamp(42px, 16vw, 98px);
         }
     }
 

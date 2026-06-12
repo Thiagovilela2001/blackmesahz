@@ -9,7 +9,9 @@
 !.env.example
 *.pem
 *.key
+*.key.pub
 *.cert
+chaves/
 *.crt
 *.pfx
 *.p12

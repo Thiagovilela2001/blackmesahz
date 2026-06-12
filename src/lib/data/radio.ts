@@ -1,15 +1,82 @@
-export const radioData = {
-    streamUrl: '',
+const configuredStreamUrl = import.meta.env.PUBLIC_RADIO_STREAM_URL || 'http://127.0.0.1:8000/blackmesa.mp3';
+
+export type RadioTrack = {
+    title: string;
+    artist: string;
+    src: string;
+    artwork?: string;
+    genre?: string;
+    release?: string;
+};
+
+export type RadioShow = {
+    date: string;
+    title: string;
+    description: string;
+    host?: string;
+    time_slot?: string;
+    genre?: string;
+    image?: string;
+};
+
+export type RadioScheduleRow = {
+    time: string;
+    shows: string[];
+};
+
+export type RadioData = {
+    mode: 'live' | 'archive';
+    streamUrl: string;
+    station: string;
+    location: string;
+    currentShow: {
+        label: string;
+        series: string;
+        title: string;
+        description: string;
+        host: string;
+    };
+    liveTrack: RadioTrack;
+    tracks: RadioTrack[];
+    tags: string[];
+    next: Array<{ time: string; title: string; subtitle: string }>;
+    highlights: RadioShow[];
+    scheduleDays: string[];
+    schedule: RadioScheduleRow[];
+};
+
+export const radioData: RadioData = {
+    mode: 'live',
+    streamUrl: configuredStreamUrl,
     station: 'BLACKMESA Hz',
     location: 'São Paulo / Online',
     currentShow: {
-        label: 'LIVE:',
-        series: 'Transmissão Piloto',
+        label: 'ON AIR:',
+        series: 'Icecast / Liquidsoap',
         title: 'BLACKMESA Hz',
-        description: 'Canal online para sets, residências, conversas e transmissões especiais orbitando UK Bass, dubstep, grime, garage e experimentações de pista.',
+        description:
+            'Transmissão ao vivo e programação autoral via Icecast + Liquidsoap, com fallback para arquivos gravados quando não houver entrada live.',
         host: 'BLACKMESA residents'
     },
-    tags: ['UK Bass', 'Dubstep', 'Grime', 'Garage', 'Breaks', 'São Paulo', 'Live Sets', 'Residência'],
+    liveTrack: {
+        title: 'BLACKMESA Hz ao vivo',
+        artist: 'Icecast / Liquidsoap',
+        src: configuredStreamUrl,
+        artwork: '/capa_quinzenal.png',
+        genre: 'Live stream',
+        release: 'BLACKMESA Hz'
+    } satisfies RadioTrack,
+    tracks: [
+        {
+            title: 'Aperta o da Forte',
+            artist: 'BLACKMESA',
+            src: '/radio/audio/aperta-o-da-forte.mp3',
+            artwork: '/capa_quinzenal.png',
+            genre: 'Autoral',
+            release: 'BLACKMESA Hz'
+        }
+    ] satisfies RadioTrack[],
+    tags: ['Ao vivo', 'Autoral', 'Icecast', 'Liquidsoap', 'UK Bass', 'Dubstep', 'Garage', 'São Paulo'],
     next: [
         { time: '20:00', title: 'BLACKMESA LABS', subtitle: 'Residents session / UK pressure' },
         { time: '22:00', title: 'CONCRETICIDADE', subtitle: 'SNOT selection / dubstep' },
@@ -19,7 +86,8 @@ export const radioData = {
         {
             date: '29 Jun 2026',
             title: 'SNOT - CONCRETICIDADE',
-            description: 'A primeira edição da série BLACKMESA Hz vira transmissão comentada, atravessando peso, textura e dubstep.',
+            description:
+                'A primeira edição da série BLACKMESA Hz vira transmissão comentada, atravessando peso, textura e dubstep.',
             host: 'SNOT',
             time_slot: '20:00 - 22:00',
             genre: 'Dubstep',
@@ -28,7 +96,8 @@ export const radioData = {
         {
             date: 'Em breve',
             title: 'LABS TRANSMISSION',
-            description: 'Sets registrados no laboratório BLACKMESA, com convidados e recortes do circuito bass brasileiro.',
+            description:
+                'Sets registrados no laboratório BLACKMESA, com convidados e recortes do circuito bass brasileiro.',
             host: 'BM Residents',
             time_slot: '18:00 - 20:00',
             genre: 'UK Bass / Grime',
