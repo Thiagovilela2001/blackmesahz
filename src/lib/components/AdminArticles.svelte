@@ -203,21 +203,25 @@
         clearMessages();
         isLoading = true;
 
-        const loginEmail =
-            email.trim().toLowerCase() === ADMIN_LOGIN && password === ADMIN_PASSWORD
-                ? adminSupabaseEmail
-                : email.trim();
-        const result = await supabase.auth.signInWithPassword({ email: loginEmail, password });
+        try {
+            const loginEmail =
+                email.trim().toLowerCase() === ADMIN_LOGIN && password === ADMIN_PASSWORD
+                    ? adminSupabaseEmail
+                    : email.trim();
+            const result = await supabase.auth.signInWithPassword({ email: loginEmail, password });
 
-        if (result.error) {
-            errorMessage = result.error.message;
+            if (result.error) {
+                errorMessage = result.error.message;
+                return;
+            }
+
+            user = result.data.user;
+            await loadArticles();
+        } catch (error) {
+            errorMessage = error instanceof Error ? error.message : 'Erro ao tentar fazer login.';
+        } finally {
             isLoading = false;
-            return;
         }
-
-        user = result.data.user;
-        await loadArticles();
-        isLoading = false;
     }
 
     async function logout() {
