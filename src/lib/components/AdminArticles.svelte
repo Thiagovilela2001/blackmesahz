@@ -60,6 +60,7 @@
     let activeAdminTab = $state<'articles' | 'radio'>('articles');
     let statusMessage = $state('');
     let errorMessage = $state('');
+    let showPassword = $state(false);
     let previewHtml = $derived(markdownToSafeHtml(form.content_markdown));
     let previewImage = $derived(safeImageUrl(form.hero_image));
     let previewCredits = $derived(
@@ -391,7 +392,12 @@
                 </label>
                 <label>
                     Senha
-                    <input type="password" bind:value={password} autocomplete="current-password" required>
+                    <div class="password-wrap">
+                        <input type={showPassword ? 'text' : 'password'} bind:value={password} autocomplete="current-password" required>
+                        <button type="button" class="show-btn" onclick={() => showPassword = !showPassword} aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>
+                            {showPassword ? '🙈' : '👁'}
+                        </button>
+                    </div>
                 </label>
                 <button type="submit" class="primary-btn">Entrar</button>
             </form>
@@ -608,6 +614,33 @@
 
     .admin-form.compact {
         max-width: 420px;
+    }
+
+    .password-wrap {
+        position: relative;
+        display: flex;
+    }
+
+    .password-wrap input {
+        flex: 1;
+        padding-right: 40px;
+    }
+
+    .show-btn {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 38px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: unset;
+        padding: 0;
     }
 
     .form-grid {
