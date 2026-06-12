@@ -1,6 +1,5 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { env } from '$env/dynamic/public';
     import { supabase } from '$lib/supabase';
     import { safeImageUrl } from '$lib/security';
     import { markdownToSafeHtml, type ArticleRow } from '$lib/articles';
@@ -46,9 +45,6 @@
     };
 
     const AUTOSAVE_KEY = 'blackmesa_admin_article_draft';
-    const ADMIN_LOGIN = 'admin';
-    const ADMIN_PASSWORD = 'blackmesa2026';
-    const adminSupabaseEmail = env.PUBLIC_ADMIN_EMAIL || 'admin@blackmesa.local';
 
     let user = $state<User | null>(null);
     let email = $state('');
@@ -204,11 +200,7 @@
         isLoading = true;
 
         try {
-            const loginEmail =
-                email.trim().toLowerCase() === ADMIN_LOGIN && password === ADMIN_PASSWORD
-                    ? adminSupabaseEmail
-                    : email.trim();
-            const result = await supabase.auth.signInWithPassword({ email: loginEmail, password });
+            const result = await supabase.auth.signInWithPassword({ email: email.trim(), password });
 
             if (result.error) {
                 errorMessage = result.error.message;
