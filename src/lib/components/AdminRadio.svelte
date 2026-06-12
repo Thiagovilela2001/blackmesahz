@@ -49,7 +49,7 @@
         published: true
     };
 
-    const radioApiUrl = $derived((env.PUBLIC_RADIO_API_URL || '').trim().replace(/\/$/, ''));
+    const radioApiUrl = $derived((env.PUBLIC_ORACLE_API_URL || '').trim().replace(/\/$/, ''));
 
     let radioTab = $state<'tracks' | 'settings'>('tracks');
     let tracks = $state<TrackRow[]>([]);
@@ -106,7 +106,7 @@
     }
 
     async function apiFetch(path: string, init: RequestInit = {}) {
-        if (!radioApiUrl) throw new Error('Configure PUBLIC_RADIO_API_URL na Vercel.');
+        if (!radioApiUrl) throw new Error('Configure PUBLIC_ORACLE_API_URL na Vercel.');
         const token = await getToken();
         const headers = new Headers();
         headers.set('Authorization', `Bearer ${token}`);
@@ -315,7 +315,7 @@
     {#if radioTab === 'tracks'}
         {#if !radioApiUrl}
             <p class="warn-box">
-                Configure <strong>PUBLIC_RADIO_API_URL</strong> na Vercel para ativar o upload de musicas (necessario para atualizar a playlist do Liquidsoap).
+                Configure <strong>PUBLIC_ORACLE_API_URL</strong> na Vercel para ativar o upload de musicas (necessario para atualizar a playlist do Liquidsoap).
             </p>
         {/if}
 
